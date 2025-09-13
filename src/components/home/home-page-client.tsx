@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,7 +25,6 @@ const SUPPORTED_AUDIO_FORMATS = ['audio/wav', 'audio/x-aiff', 'audio/x-pcm', 'au
 
 export default function HomePageClient() {
   const [angerText, setAngerText] = useState('');
-  const [angerMedia, setAngerMedia] = useState<File | null>(null);
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
   const [isCropDialogOpen, setIsCropDialogOpen] = useState(false);
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
@@ -63,11 +62,11 @@ export default function HomePageClient() {
         URL.revokeObjectURL(audioUrl);
       }
     };
-  }, []);
+  }, [audioUrl]);
 
   const showFlushButton = useMemo(() => {
-    return angerText.length > 0 || angerMedia !== null || audioUrl !== null;
-  }, [angerText, angerMedia, audioUrl]);
+    return angerText.length > 0 || mediaPreview !== null || audioUrl !== null;
+  }, [angerText, mediaPreview, audioUrl]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -103,8 +102,7 @@ export default function HomePageClient() {
     if (!rawImageForCrop) return;
     try {
       const croppedImageBlob = await getCroppedImg(rawImageForCrop, croppedAreaPixels);
-      const file = new File([croppedImageBlob], 'cropped-image.jpeg', { type: 'image/jpeg' });
-      setAngerMedia(file);
+      // No longer saving file to state, just the preview URL.
       setMediaPreview(URL.createObjectURL(croppedImageBlob));
     } catch (e) {
       console.error(e);
@@ -203,7 +201,6 @@ export default function HomePageClient() {
     if (mediaPreview) {
         URL.revokeObjectURL(mediaPreview);
     }
-    setAngerMedia(null);
     setMediaPreview(null);
     if(fileInputRef.current) {
       fileInputRef.current.value = '';
