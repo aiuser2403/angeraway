@@ -56,7 +56,7 @@ export default function HomePageClient() {
   const isContentPresent = useMemo(() => {
     return angerText.trim().length > 0 || mediaPreview !== null || audioUrl !== null;
   }, [angerText, mediaPreview, audioUrl]);
-
+  
   const saveDataToLocalStorage = useMemo(() => {
     return (data: Partial<Omit<StoredData, 'timestamp'>>) => {
       try {
@@ -69,7 +69,7 @@ export default function HomePageClient() {
       }
     };
   }, []);
-  
+
   useEffect(() => {
     try {
       const storedDataString = localStorage.getItem(STORAGE_KEY);
@@ -173,10 +173,10 @@ export default function HomePageClient() {
     }
   };
   
-  const handleCropSave = async (croppedAreaPixels: any) => {
+  const handleCropSave = async (croppedAreaPixels: any, rotation: number) => {
     if (!rawImageForCrop) return;
     try {
-      const croppedImageBlob = await getCroppedImg(rawImageForCrop, croppedAreaPixels);
+      const croppedImageBlob = await getCroppedImg(rawImageForCrop, croppedAreaPixels, rotation);
       
       const reader = new FileReader();
       reader.onloadend = () => {
