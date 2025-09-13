@@ -10,8 +10,13 @@ import { Image as ImageIcon, Mic, FileText, Smile } from 'lucide-react';
 import FlushPotIcon from '@/components/icons/flush-pot-icon';
 import { useToast } from '@/hooks/use-toast';
 import * as Tone from 'tone';
+import Image from 'next/image';
 
 type PageState = 'idle' | 'flushing' | 'flushed';
+
+const MAX_FILE_SIZE_MB = 10;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+const SUPPORTED_FORMATS = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
 
 export default function HomePageClient() {
   const [angerText, setAngerText] = useState('');
@@ -52,6 +57,24 @@ export default function HomePageClient() {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        toast({
+          variant: 'destructive',
+          title: 'File too large',
+          description: `Please select a file smaller than ${MAX_FILE_SIZE_MB}MB.`,
+        });
+        return;
+      }
+
+      if (!SUPPORTED_FORMATS.includes(file.type)) {
+        toast({
+          variant: 'destructive',
+          title: 'Invalid file type',
+          description: 'Please select a JPEG, PNG, WEBP, GIF, or SVG file.',
+        });
+        return;
+      }
+      
       setAngerMedia(file);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -99,7 +122,7 @@ export default function HomePageClient() {
         <p className="mt-2 text-lg text-muted-foreground">Write or record why you're angry.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl mx-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-[84rem] mx-auto">
         <Card className="shadow-lg transform hover:scale-105 transition-transform duration-300">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 font-headline">
@@ -110,7 +133,7 @@ export default function HomePageClient() {
           <CardContent>
             <Textarea
               placeholder="Describe why you’re angry…"
-              className="h-[25rem] resize-none"
+              className="h-[30rem] resize-none"
               value={angerText}
               onChange={(e) => setAngerText(e.target.value)}
               aria-label="Write your anger"
@@ -126,27 +149,39 @@ export default function HomePageClient() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col space-y-4 h-full justify-between min-h-[25rem]">
-              <div>
+            <div className="flex flex-col space-y-4 h-full justify-between min-h-[30rem]">
+              <div className="flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4">
+                {mediaPreview ? (
+                  <div className="relative w-full h-full">
+                    <Image src={mediaPreview} alt="Anger media preview" layout="fill" objectFit="contain" className="rounded-md" />
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground">
+                    <ImageIcon className="mx-auto h-12 w-12" />
+                    <p className="mt-2">Upload a photo to express your anger.</p>
+                    <p className="text-xs mt-1">Supports JPEG, PNG, WEBP, GIF, SVG. Max 10MB.</p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex-shrink-0 flex gap-4 mt-4">
                 <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center">
                   <ImageIcon className="mr-2 h-4 w-4" />
-                  Upload Image
+                  {mediaPreview ? 'Change Image' : 'Upload Image'}
                 </Button>
-                <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+                <input 
+                  type="file" 
+                  accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml" 
+                  ref={fileInputRef} 
+                  onChange={handleFileChange} 
+                  className="hidden" 
+                />
                 
-                <Button variant={isRecording ? "destructive" : "outline"} onClick={handleRecord} className="w-full justify-center mt-4">
+                <Button variant={isRecording ? "destructive" : "outline"} onClick={handleRecord} className="w-full justify-center">
                   <Mic className="mr-2 h-4 w-4" />
                   {isRecording ? "Stop Recording" : "Record Audio"}
                 </Button>
               </div>
-
-              <p className="text-sm text-muted-foreground text-center pt-2">Upload a photo or record your feelings.</p>
-              
-              {mediaPreview && (
-                <div className="mt-4 p-2 border rounded-md">
-                   <img src={mediaPreview} alt="Anger media preview" className="max-h-24 w-auto mx-auto rounded" />
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>
