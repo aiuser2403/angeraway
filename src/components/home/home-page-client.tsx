@@ -125,6 +125,9 @@ export default function HomePageClient() {
     if (!rawImageForCrop) return;
     try {
       const croppedImageBlob = await getCroppedImg(rawImageForCrop, croppedAreaPixels);
+      if (mediaPreview) {
+        URL.revokeObjectURL(mediaPreview);
+      }
       const previewUrl = URL.createObjectURL(croppedImageBlob);
       setMediaPreview(previewUrl);
     } catch (e) {
@@ -358,9 +361,9 @@ export default function HomePageClient() {
 
                   {recordingState !== 'recording' && (
                      <div className="flex gap-4">
-                        <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center" disabled={!!mediaPreview}>
+                        <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center">
                           <ImageIcon className="mr-2 h-4 w-4" />
-                          {mediaPreview ? 'Image Uploaded' : 'Upload Image'}
+                          {mediaPreview ? 'Change Image' : 'Upload Image'}
                         </Button>
                         <input 
                           type="file" 
@@ -473,9 +476,14 @@ export default function HomePageClient() {
         {pageState === 'flushing' && renderFlushingState()}
         {pageState === 'flushed' && renderFlushedState()}
       </AnimatePresence>
+       <footer className="w-full mt-12 text-center text-muted-foreground text-sm">
+        <p>Disclaimer: None of your message, uploaded images or recording will be saved on this page after 60 minutes</p>
+      </footer>
     </div>
   );
 }
 
     
+    
+
     
