@@ -8,6 +8,14 @@ const initialQuotes = [
   "Let go and live freely.",
   "The best way out is always through.",
   "Every moment is a fresh beginning.",
+  "You’re not alone.",
+  "It’s okay to feel this way.",
+  "Better days are coming.",
+  "You are stronger than you think.",
+  "Take it one step at a time.",
+  "Let yourself rest.",
+  "It’s okay to ask for help.",
+  "You matter.",
 ];
 
 export default function MotivationalQuotesPage() {
