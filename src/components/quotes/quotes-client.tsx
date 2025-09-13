@@ -53,7 +53,7 @@ export default function QuotesClient({ initialQuotes }: QuotesClientProps) {
   return (
     <div className="flex flex-col items-center justify-center text-white min-h-[400px]">
        <div className="text-center mb-8">
-        <h1 className="text-5xl md:text-7xl font-headline font-bold text-white drop-shadow-lg">Motivational Quotes</h1>
+        <h1 className="text-5xl md:text-7xl font-headline font-bold text-white drop-shadow-lg">Things you Already Know</h1>
       </div>
 
       <div className="relative h-40 w-full max-w-3xl flex items-center justify-center">
