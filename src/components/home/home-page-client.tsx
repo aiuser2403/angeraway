@@ -87,12 +87,13 @@ export default function HomePageClient() {
       }
       
       setAngerMedia(file);
-      setRecordingState('idle');
-      if (audioUrl) {
-        URL.revokeObjectURL(audioUrl);
-        setAudioUrl(null);
-      }
-      audioChunksRef.current = [];
+      // Don't reset audio when an image is selected
+      // setRecordingState('idle');
+      // if (audioUrl) {
+      //   URL.revokeObjectURL(audioUrl);
+      //   setAudioUrl(null);
+      // }
+      // audioChunksRef.current = [];
 
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -110,8 +111,9 @@ export default function HomePageClient() {
       }
       audioChunksRef.current = [];
       
-      setAngerMedia(null);
-      setMediaPreview(null);
+      // We don't want to clear the image when starting to record
+      // setAngerMedia(null);
+      // setMediaPreview(null);
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream);
@@ -159,22 +161,30 @@ export default function HomePageClient() {
   };
   
   const handleRerecord = () => {
-    setAudioUrl(null);
     if(audioUrl) {
       URL.revokeObjectURL(audioUrl);
     }
+    setAudioUrl(null);
     setRecordingState('idle');
     audioChunksRef.current = [];
     startRecording();
   };
 
   const handleDiscardAudio = () => {
-    setAudioUrl(null);
     if(audioUrl) {
       URL.revokeObjectURL(audioUrl);
     }
+    setAudioUrl(null);
     setRecordingState('idle');
     audioChunksRef.current = [];
+  }
+
+  const handleDiscardImage = () => {
+    setAngerMedia(null);
+    setMediaPreview(null);
+    if(fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   }
 
 
@@ -202,23 +212,16 @@ export default function HomePageClient() {
   }
   
   const renderMediaContent = () => {
-    if (mediaPreview) {
-      return (
-        <div className="relative w-full h-full">
-          <Image src={mediaPreview} alt="Anger media preview" fill objectFit="contain" className="rounded-md" />
-        </div>
-      );
-    }
-
-    switch (recordingState) {
-      case 'recording':
+    if (recordingState === 'recording') {
         return (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <Mic className="h-16 w-16 text-red-500 animate-pulse" />
             <p className="mt-4 text-lg">Recording in progress...</p>
           </div>
         );
-      case 'recorded':
+    }
+
+    if (recordingState === 'recorded') {
         return (
           <div className="flex flex-col items-center justify-center h-full text-center p-4">
             <p className="text-lg mb-4">Listen to your recording:</p>
@@ -235,15 +238,16 @@ export default function HomePageClient() {
             </div>
           </div>
         );
-      default: // idle, denied
-        return (
-            <div className="text-center text-muted-foreground">
-              <ImageIcon className="mx-auto h-12 w-12" />
-              <p className="mt-2">Upload a photo to express your anger.</p>
-              <p className="text-xs mt-1">Supports JPEG, PNG, WEBP, GIF, SVG. Max 10MB.</p>
-            </div>
-        );
     }
+
+    // Default 'idle' or 'denied' state for audio, but an image might be present
+    return (
+        <div className="text-center text-muted-foreground">
+          <ImageIcon className="mx-auto h-12 w-12" />
+          <p className="mt-2">Upload a photo to express your anger.</p>
+          <p className="text-xs mt-1">Supports JPEG, PNG, WEBP, GIF, SVG. Max 10MB.</p>
+        </div>
+    );
   };
 
 
@@ -282,34 +286,68 @@ export default function HomePageClient() {
           </CardHeader>
           <CardContent>
              <div className="flex flex-col space-y-4 h-full justify-between min-h-[50rem]">
-                <div className="flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4">
-                  {renderMediaContent()}
+                <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden">
+                  {mediaPreview ? (
+                     <div className="w-full h-full">
+                        <Image src={mediaPreview} alt="Anger media preview" layout="fill" objectFit="contain" className="rounded-md" />
+                     </div>
+                  ) : (
+                    renderMediaContent()
+                  )}
                 </div>
-                {recordingState !== 'recording' && recordingState !== 'recorded' && (
-                  <div className="flex-shrink-0 flex gap-4 mt-4">
-                      <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center">
-                        <ImageIcon className="mr-2 h-4 w-4" />
-                        {mediaPreview ? 'Change Image' : 'Upload Image'}
+                
+                <div className="flex-shrink-0 flex flex-col gap-4 mt-4">
+                  {mediaPreview && (
+                     <Button variant="outline" onClick={handleDiscardImage} className="w-full justify-center">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Remove Image
                       </Button>
-                      <input 
-                        type="file" 
-                        accept={SUPPORTED_IMAGE_FORMATS.join(',')} 
-                        ref={fileInputRef} 
-                        onChange={handleFileChange} 
-                        className="hidden" 
-                      />
-                      <Button variant="outline" onClick={handleRecordControl} className="w-full justify-center">
-                        <Mic className="mr-2 h-4 w-4" />
-                        Record Audio
+                  )}
+
+                  {recordingState !== 'recording' && (
+                     <div className="flex gap-4">
+                        <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center">
+                          <ImageIcon className="mr-2 h-4 w-4" />
+                          {mediaPreview ? 'Change Image' : 'Upload Image'}
+                        </Button>
+                        <input 
+                          type="file" 
+                          accept={SUPPORTED_IMAGE_FORMATS.join(',')} 
+                          ref={fileInputRef} 
+                          onChange={handleFileChange} 
+                          className="hidden" 
+                        />
+                        <Button variant="outline" onClick={handleRecordControl} className="w-full justify-center" disabled={recordingState === 'recorded'}>
+                          <Mic className="mr-2 h-4 w-4" />
+                          Record Audio
+                        </Button>
+                    </div>
+                  )}
+
+                  {recordingState === 'recording' && (
+                      <Button variant="destructive" onClick={handleRecordControl} className="w-full justify-center">
+                          <Square className="mr-2 h-4 w-4" />
+                          Stop Recording
                       </Button>
-                  </div>
-                )}
-                 {recordingState === 'recording' && (
-                    <Button variant="destructive" onClick={handleRecordControl} className="w-full justify-center mt-4">
-                        <Square className="mr-2 h-4 w-4" />
-                        Stop Recording
-                    </Button>
-                )}
+                  )}
+
+                  {recordingState === 'recorded' && (
+                     <div className="border-t pt-4">
+                        <p className="text-lg mb-4 text-center">Listen to your recording:</p>
+                        <audio ref={audioRef} src={audioUrl!} controls className="w-full" />
+                        <div className="flex gap-4 mt-4 w-full">
+                          <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Discard Audio
+                          </Button>
+                          <Button onClick={handleRerecord} className="w-full justify-center">
+                            <Mic className="mr-2 h-4 w-4" />
+                            Re-record
+                          </Button>
+                        </div>
+                      </div>
+                  )}
+                </div>
             </div>
           </CardContent>
         </Card>
@@ -375,5 +413,3 @@ export default function HomePageClient() {
     </div>
   );
 }
-
-    
