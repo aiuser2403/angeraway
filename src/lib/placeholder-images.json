@@ -12,6 +12,14 @@
       "description": "A pleasant and calming beach scene at sunrise.",
       "imageUrl": "https://picsum.photos/seed/beach/1920/1080",
       "imageHint": "serene beach"
+    },
+    {
+        "id": "toilet-background",
+        "description": "A top-down view of a clean, white toilet bowl, ready to flush away anger.",
+        "imageUrl": "https://images.unsplash.com/photo-1582298539293-2f883d631a00?q=80&w=1920",
+        "imageHint": "toilet top-down"
     }
   ]
 }
+
+    

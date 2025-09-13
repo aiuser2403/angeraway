@@ -6,13 +6,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Image as ImageIcon, Mic, FileText, Square, Trash2, X, Music, RefreshCw, Play, Pause } from 'lucide-react';
-import FlushPotIcon from '@/components/icons/flush-pot-icon';
+import { Image as ImageIcon, Mic, FileText, Square, Trash2, X, Play, Pause } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import * as Tone from 'tone';
 import Image from 'next/image';
 import ImageCropDialog from './image-crop-dialog';
 import PleasantSmileyIcon from '@/components/icons/pleasant-smiley-icon';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 type PageState = 'idle' | 'flushing' | 'flushed';
 type RecordingState = 'idle' | 'recording' | 'recorded' | 'denied';
@@ -43,21 +42,21 @@ export default function HomePageClient() {
   const [doneSharingClicked, setDoneSharingClicked] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
-
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const flushAudioRef = useRef<HTMLAudioElement | null>(null);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   const { toast } = useToast();
 
-  const [flushSynth, setFlushSynth] = useState<Tone.NoiseSynth | null>(null);
-
   const isContentPresent = useMemo(() => {
     return angerText.trim().length > 0 || mediaPreview !== null || audioUrl !== null;
   }, [angerText, mediaPreview, audioUrl]);
-  
+
+  const toiletImage = PlaceHolderImages.find(img => img.id === 'toilet-background');
+
   const saveDataToLocalStorage = useMemo(() => {
     return (data: Partial<Omit<StoredData, 'timestamp'>>) => {
       try {
@@ -140,23 +139,13 @@ export default function HomePageClient() {
   }, [angerText, mediaPreview, audioUrl, isContentPresent]);
 
   useEffect(() => {
-    const synth = new Tone.NoiseSynth({
-      noise: {
-        type: 'white',
-        playbackRate: 0.1,
-      },
-      envelope: {
-        attack: 0.005,
-        decay: 0.3,
-        sustain: 0,
-        release: 1,
-      },
-    }).toDestination();
-    setFlushSynth(synth);
+    // Pre-load the flush audio
+    const audio = new Audio('/sounds/toilet-flush.mp3');
+    flushAudioRef.current = audio;
 
     return () => {
-      synth.dispose();
-    };
+        flushAudioRef.current = null;
+    }
   }, []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -202,7 +191,7 @@ export default function HomePageClient() {
     setIsCropDialogOpen(false);
     setRawImageForCrop(null);
     if(fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputInputRef.current.value = '';
     }
   }
 
@@ -306,13 +295,10 @@ export default function HomePageClient() {
 
 
   const handleFlush = async () => {
-    if (Tone.context.state !== 'running') {
-      await Tone.start();
-    }
     setPageState('flushing');
 
-    if (flushSynth) {
-      flushSynth.triggerAttackRelease("1s");
+    if (flushAudioRef.current) {
+        flushAudioRef.current.play();
     }
 
     setTimeout(() => {
@@ -326,7 +312,7 @@ export default function HomePageClient() {
       } catch (error) {
         console.error("Error removing from local storage:", error);
       }
-    }, 2000);
+    }, 5000); // Wait for flush animation and sound to finish
   };
 
   const handleReset = () => {
@@ -336,8 +322,8 @@ export default function HomePageClient() {
   }
 
   const contentVariants = {
-    initial: { opacity: 1, scale: 1 },
-    flushing: { opacity: 0, scale: 0.8, transition: { duration: 1 } },
+    initial: { opacity: 1, y: 0, scale: 1 },
+    flushing: { opacity: 0, y: '100vh', scale: 0.2, transition: { duration: 2, ease: "easeInOut" } },
   };
   
   const renderMediaContent = () => {
@@ -367,7 +353,12 @@ export default function HomePageClient() {
     if (audioUrl) {
         return (
           <div className="flex flex-col items-center justify-center flex-1 h-full text-center p-4">
-            <Music className="h-16 w-16 text-primary" />
+            <div className="relative">
+                <div className="absolute inset-0 bg-primary/10 rounded-full animate-pulse"></div>
+                <div className="relative bg-primary/20 rounded-full p-6">
+                    <Mic className="h-16 w-16 text-primary" />
+                </div>
+            </div>
             <p className="text-lg mt-4 mb-4">Your recording is ready.</p>
           </div>
         );
@@ -382,156 +373,201 @@ export default function HomePageClient() {
   };
 
   const renderIdleState = () => (
-    <>
-      <div className="text-center mb-12">
-        <h1 className="text-5xl md:text-7xl font-headline font-bold text-primary">Angry</h1>
-        <p className="mt-2 text-lg text-muted-foreground">Write or record why you're angry.</p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl mx-auto">
-        <motion.div
-          animate={pageState === 'flushing' && angerText ? 'flushing' : 'initial'}
-          variants={contentVariants}
+    <AnimatePresence>
+        <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="w-full"
         >
-          <Card className="shadow-lg transform hover:scale-[1.02] transition-transform duration-300">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-headline">
-                <FileText className="text-accent" />
-                Write it down
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                placeholder="Describe why you’re angry…"
-                className="min-h-[500px] resize-none"
-                value={angerText}
-                onChange={(e) => setAngerText(e.target.value)}
-                aria-label="Write your anger"
-              />
-            </CardContent>
-          </Card>
-        </motion.div>
-        
-        <motion.div
-          animate={pageState === 'flushing' && (mediaPreview || audioUrl) ? 'flushing' : 'initial'}
-          variants={contentVariants}
-        >
-          <Card className="shadow-lg transform hover:scale-[1.02] transition-transform duration-300">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-headline">
-                <Mic className="text-accent" />
-                Upload or Record
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col space-y-4 h-full justify-between min-h-[500px]">
-                  <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-full">
-                    {renderMediaContent()}
-                  </div>
-                  
-                  <div className="flex-shrink-0 flex flex-col gap-4 mt-4">
-                    
-                    {audioUrl && recordingState !== 'recording' && (
-                      <div className="border-t pt-4 flex gap-4 w-full">
-                          <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Discard
-                          </Button>
-                           <Button onClick={handleListen} variant="outline" className="w-full justify-center">
-                              {isAudioPlaying ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
-                              {isAudioPlaying ? 'Stop' : 'Listen'}
-                          </Button>
-                        </div>
-                    )}
+        <div className="text-center mb-12">
+            <h1 className="text-5xl md:text-7xl font-headline font-bold text-primary">Angry</h1>
+            <p className="mt-2 text-lg text-muted-foreground">Write or record why you're angry.</p>
+        </div>
 
-                    <div className="flex gap-4">
-                        <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center">
-                          <ImageIcon className="mr-2 h-4 w-4" />
-                          {mediaPreview ? 'Change Image' : 'Upload Image'}
-                        </Button>
-                        <input 
-                          type="file" 
-                          accept={SUPPORTED_IMAGE_FORMATS.join(',')} 
-                          ref={fileInputRef} 
-                          onChange={handleFileChange} 
-                          className="hidden" 
-                        />
-                        <Button variant={recordingState === 'recording' ? 'destructive' : 'outline'} onClick={handleRecordControl} className="w-full justify-center">
-                          {recordingState === 'recording' ? (
-                              <>
-                                <Square className="mr-2 h-4 w-4" />
-                                Stop Recording
-                              </>
-                          ) : (
-                              <>
-                                <Mic className="mr-2 h-4 w-4" />
-                                {audioUrl ? 'Re-record' : 'Record Audio'}
-                              </>
-                          )}
-                        </Button>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl mx-auto">
+            <Card className="shadow-lg transform hover:scale-[1.02] transition-transform duration-300">
+                <CardHeader>
+                <CardTitle className="flex items-center gap-2 font-headline">
+                    <FileText className="text-accent" />
+                    Write it down
+                </CardTitle>
+                </CardHeader>
+                <CardContent>
+                <Textarea
+                    placeholder="Describe why you’re angry…"
+                    className="min-h-[500px] resize-none"
+                    value={angerText}
+                    onChange={(e) => setAngerText(e.target.value)}
+                    aria-label="Write your anger"
+                />
+                </CardContent>
+            </Card>
+            
+            <Card className="shadow-lg transform hover:scale-[1.02] transition-transform duration-300">
+                <CardHeader>
+                <CardTitle className="flex items-center gap-2 font-headline">
+                    <Mic className="text-accent" />
+                    Upload or Record
+                </CardTitle>
+                </CardHeader>
+                <CardContent>
+                <div className="flex flex-col space-y-4 h-full justify-between min-h-[500px]">
+                    <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-full">
+                        {renderMediaContent()}
                     </div>
+                    
+                    <div className="flex-shrink-0 flex flex-col gap-4 mt-4">
+                        
+                        {audioUrl && recordingState === 'recorded' && (
+                        <div className="border-t pt-4 flex gap-4 w-full">
+                            <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Discard
+                            </Button>
+                            <Button onClick={handleListen} variant="outline" className="w-full justify-center">
+                                {isAudioPlaying ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
+                                {isAudioPlaying ? 'Stop' : 'Listen'}
+                            </Button>
+                            </div>
+                        )}
 
-                  </div>
-              </div>
-            </CardContent>
-          </Card>
+                        <div className="flex gap-4">
+                            <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center">
+                            <ImageIcon className="mr-2 h-4 w-4" />
+                            {mediaPreview ? 'Change Image' : 'Upload Image'}
+                            </Button>
+                            <input 
+                            type="file" 
+                            accept={SUPPORTED_IMAGE_FORMATS.join(',')} 
+                            ref={fileInputRef} 
+                            onChange={handleFileChange} 
+                            className="hidden" 
+                            />
+                            <Button variant={recordingState === 'recording' ? 'destructive' : 'outline'} onClick={handleRecordControl} className="w-full justify-center">
+                            {recordingState === 'recording' ? (
+                                <>
+                                    <Square className="mr-2 h-4 w-4" />
+                                    Stop Recording
+                                </>
+                            ) : (
+                                <>
+                                    <Mic className="mr-2 h-4 w-4" />
+                                    {audioUrl ? 'Re-record' : 'Record Audio'}
+                                </>
+                            )}
+                            </Button>
+                        </div>
+
+                    </div>
+                </div>
+                </CardContent>
+            </Card>
+        </div>
+
+        <AnimatePresence>
+            {showDoneSharing && !doneSharingClicked && (
+            <motion.div
+                initial={{ y: 100, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 100, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 50 }}
+                className="fixed bottom-10 right-10"
+            >
+                <Button size="lg" className="rounded-full shadow-2xl" onClick={() => setDoneSharingClicked(true)}>
+                Done Sharing
+                </Button>
+            </motion.div>
+            )}
+        </AnimatePresence>
+        <AnimatePresence>
+            {doneSharingClicked && pageState === 'idle' && (
+            <motion.div
+                initial={{ y: 100, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 100, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 50 }}
+                className="fixed bottom-10 right-10 flex gap-4"
+            >
+                <Button size="lg" className="rounded-full shadow-2xl bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleFlush}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-6 w-6"><path d="M5 12h14v8a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-8z"/><path d="M20 6h-1a1 1 0 0 0-1 1v2H6V7a1 1 0 0 0-1-1H4a2 2 0 0 0-2 2v3h20V8a2 2 0 0 0-2-2z"/><path d="M20 7v0a2 2 0 0 1-2-2h-1"/></svg>
+                Flush It Out
+                </Button>
+            </motion.div>
+            )}
+        </AnimatePresence>
+        
+        {rawImageForCrop && (
+            <ImageCropDialog 
+            isOpen={isCropDialogOpen}
+            onClose={handleCropDialogClose}
+            imageSrc={rawImageForCrop}
+            onSave={handleImageSave}
+            />
+        )}
         </motion.div>
-      </div>
-
-      <AnimatePresence>
-        {showDoneSharing && !doneSharingClicked && (
-          <motion.div
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 50 }}
-            className="fixed bottom-10 right-10"
-          >
-            <Button size="lg" className="rounded-full shadow-2xl" onClick={() => setDoneSharingClicked(true)}>
-              Done Sharing
-            </Button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      <AnimatePresence>
-        {doneSharingClicked && pageState === 'idle' && (
-          <motion.div
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 50 }}
-            className="fixed bottom-10 right-10 flex gap-4"
-          >
-            <Button size="lg" className="rounded-full shadow-2xl" onClick={handleFlush}>
-              <FlushPotIcon className="mr-2" />
-              Flush It Out
-            </Button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      
-      {rawImageForCrop && (
-        <ImageCropDialog 
-          isOpen={isCropDialogOpen}
-          onClose={handleCropDialogClose}
-          imageSrc={rawImageForCrop}
-          onSave={handleImageSave}
-        />
-      )}
-    </>
+    </AnimatePresence>
   );
 
   const renderFlushingState = () => (
-     <motion.div
-        key="flushing"
-        initial={{ scale: 0.5, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.5 }}
-        className="flex flex-col items-center justify-center text-primary"
-      >
-        <FlushPotIcon className="w-32 h-32" isFlushing={true} />
-        <p className="text-2xl font-headline mt-4">Flushing...</p>
-      </motion.div>
+     <div className="fixed inset-0 flex items-center justify-center z-50">
+        {toiletImage && (
+            <Image
+                src={toiletImage.imageUrl}
+                alt={toiletImage.description}
+                layout="fill"
+                objectFit="cover"
+                data-ai-hint={toiletImage.imageHint}
+            />
+        )}
+        <div className="absolute inset-0 bg-black/30" />
+        <div className="relative w-full max-w-6xl mx-auto h-full">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full h-full items-center">
+                <motion.div
+                    animate={isContentPresent && angerText ? "flushing" : "initial"}
+                    variants={contentVariants}
+                    className="w-full"
+                >
+                    <Card>
+                        <CardHeader>
+                        <CardTitle className="flex items-center gap-2 font-headline">
+                            <FileText className="text-accent" />
+                            Write it down
+                        </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                        <Textarea
+                            readOnly
+                            value={angerText}
+                            className="min-h-[500px] resize-none"
+                        />
+                        </CardContent>
+                    </Card>
+                </motion.div>
+                <motion.div
+                    animate={isContentPresent && (mediaPreview || audioUrl) ? "flushing" : "initial"}
+                    variants={contentVariants}
+                    className="w-full"
+                >
+                     <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 font-headline">
+                                <Mic className="text-accent" />
+                                Upload or Record
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex flex-col space-y-4 h-full justify-between min-h-[500px]">
+                                <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-full">
+                                    {renderMediaContent()}
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </motion.div>
+            </div>
+        </div>
+      </div>
   );
   
   const renderFlushedState = () => (
@@ -555,9 +591,9 @@ export default function HomePageClient() {
   return (
     <div className="container mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-[calc(100vh-80px)]">
       <AnimatePresence mode="wait">
-        {pageState === 'idle' && <motion.div key="idle" exit={{ opacity: 0, scale: 0.8 }} transition={{ duration: 0.5 }}>{renderIdleState()}</motion.div>}
-        {pageState === 'flushing' && <motion.div key="flushing-container" exit={{ opacity: 0, scale: 0.8 }} transition={{ duration: 0.5 }}>{renderFlushingState()}</motion.div>}
-        {pageState === 'flushed' && renderFlushedState()}
+        {pageState === 'idle' && renderIdleState()}
+        {pageState === 'flushing' && renderFlushingState()}
+        {pageState === 'flushed' && <motion.div key="flushed-container">{renderFlushedState()}</motion.div>}
       </AnimatePresence>
        <footer className="w-full mt-12 text-center text-muted-foreground text-sm">
         <p>Disclaimer: None of your message, uploaded images or recording will be saved on this page after 30 minutes</p>
@@ -565,3 +601,5 @@ export default function HomePageClient() {
     </div>
   );
 }
+
+    
