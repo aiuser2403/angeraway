@@ -57,17 +57,15 @@ export default function HomePageClient() {
 
   const toiletImage = PlaceHolderImages.find(img => img.id === 'toilet-background');
 
-  const saveDataToLocalStorage = useMemo(() => {
-    return (data: Partial<Omit<StoredData, 'timestamp'>>) => {
-      try {
-        const currentDataString = localStorage.getItem(STORAGE_KEY);
-        const currentData = currentDataString ? JSON.parse(currentDataString) : {};
-        const newData = { ...currentData, ...data, timestamp: Date.now() };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
-      } catch (error) {
-        console.error("Error saving to local storage:", error);
-      }
-    };
+  const saveDataToLocalStorage = useCallback((data: Partial<Omit<StoredData, 'timestamp'>>) => {
+    try {
+      const currentDataString = localStorage.getItem(STORAGE_KEY);
+      const currentData = currentDataString ? JSON.parse(currentDataString) : {};
+      const newData = { ...currentData, ...data, timestamp: Date.now() };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+    } catch (error) {
+      console.error("Error saving to local storage:", error);
+    }
   }, []);
 
   useEffect(() => {
@@ -93,7 +91,6 @@ export default function HomePageClient() {
       console.error("Error loading from local storage:", error);
       localStorage.removeItem(STORAGE_KEY);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -140,11 +137,14 @@ export default function HomePageClient() {
 
   useEffect(() => {
     // Pre-load the flush audio
-    const audio = new Audio('/sounds/toilet-flush.mp3');
+    const audio = new Audio('https://firebasestorage.googleapis.com/v0/b/prototyper-de2a8.appspot.com/o/public%2Ftoilet-flush.mp3?alt=media&token=85c64287-2598-4444-8461-95ed158f3103');
     flushAudioRef.current = audio;
 
     return () => {
-        flushAudioRef.current = null;
+        if (flushAudioRef.current) {
+            flushAudioRef.current.pause();
+            flushAudioRef.current = null;
+        }
     }
   }, []);
 
@@ -179,8 +179,8 @@ export default function HomePageClient() {
   };
   
   const handleImageSave = useCallback((newImage: string | null) => {
+    setMediaPreview(newImage);
     if (newImage) {
-      setMediaPreview(newImage);
       saveDataToLocalStorage({ mediaPreview: newImage });
     }
     setIsCropDialogOpen(false);
@@ -191,7 +191,7 @@ export default function HomePageClient() {
     setIsCropDialogOpen(false);
     setRawImageForCrop(null);
     if(fileInputRef.current) {
-      fileInputInputRef.current.value = '';
+      fileInputRef.current.value = '';
     }
   }
 
@@ -253,15 +253,6 @@ export default function HomePageClient() {
     } else if (recordingState === 'recording') {
       stopRecording();
     }
-  };
-  
-  const handleRerecord = () => {
-    setAudioUrl(null);
-    setIsAudioPlaying(false);
-    saveDataToLocalStorage({ audioUrl: null });
-    setRecordingState('idle');
-    audioChunksRef.current = [];
-    startRecording();
   };
   
   const handleListen = () => {
@@ -330,7 +321,7 @@ export default function HomePageClient() {
     if (mediaPreview) {
         return (
           <div className="w-full h-full relative group">
-            <Image src={mediaPreview} alt="Anger media preview" fill className="object-contain rounded-md" />
+            <Image src={mediaPreview} alt="Anger media preview" layout="fill" className="object-contain rounded-md" />
             <div className="absolute top-2 right-2 z-10">
                 <Button size="icon" variant="destructive" onClick={handleDiscardImage} className="rounded-full h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
                     <X className="h-4 w-4" />
@@ -510,7 +501,7 @@ export default function HomePageClient() {
   );
 
   const renderFlushingState = () => (
-     <div className="fixed inset-0 flex items-center justify-center z-50">
+     <div className="fixed inset-0 flex items-center justify-center z-50 overflow-hidden">
         {toiletImage && (
             <Image
                 src={toiletImage.imageUrl}
@@ -524,46 +515,50 @@ export default function HomePageClient() {
         <div className="relative w-full max-w-6xl mx-auto h-full">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full h-full items-center">
                 <motion.div
-                    animate={isContentPresent && angerText ? "flushing" : "initial"}
+                    animate={angerText ? "flushing" : "initial"}
                     variants={contentVariants}
                     className="w-full"
                 >
-                    <Card>
-                        <CardHeader>
-                        <CardTitle className="flex items-center gap-2 font-headline">
-                            <FileText className="text-accent" />
-                            Write it down
-                        </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                        <Textarea
-                            readOnly
-                            value={angerText}
-                            className="min-h-[500px] resize-none"
-                        />
-                        </CardContent>
-                    </Card>
+                    {angerText && (
+                        <Card>
+                            <CardHeader>
+                            <CardTitle className="flex items-center gap-2 font-headline">
+                                <FileText className="text-accent" />
+                                Write it down
+                            </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                            <Textarea
+                                readOnly
+                                value={angerText}
+                                className="min-h-[500px] resize-none"
+                            />
+                            </CardContent>
+                        </Card>
+                    )}
                 </motion.div>
                 <motion.div
-                    animate={isContentPresent && (mediaPreview || audioUrl) ? "flushing" : "initial"}
+                    animate={mediaPreview || audioUrl ? "flushing" : "initial"}
                     variants={contentVariants}
                     className="w-full"
                 >
-                     <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 font-headline">
-                                <Mic className="text-accent" />
-                                Upload or Record
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex flex-col space-y-4 h-full justify-between min-h-[500px]">
-                                <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-full">
-                                    {renderMediaContent()}
+                    {(mediaPreview || audioUrl) && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2 font-headline">
+                                    <Mic className="text-accent" />
+                                    Upload or Record
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="flex flex-col space-y-4 h-full justify-between min-h-[500px]">
+                                    <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-full">
+                                        {renderMediaContent()}
+                                    </div>
                                 </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                            </CardContent>
+                        </Card>
+                    )}
                 </motion.div>
             </div>
         </div>
@@ -601,5 +596,3 @@ export default function HomePageClient() {
     </div>
   );
 }
-
-    
