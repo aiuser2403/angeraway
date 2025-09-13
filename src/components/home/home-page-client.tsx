@@ -100,19 +100,17 @@ export default function HomePageClient() {
   useEffect(() => {
     // This effect manages the lifecycle of the Audio object.
     if (audioUrl && typeof window !== 'undefined') {
-      audioRef.current = new Audio(audioUrl);
-      const currentAudioRef = audioRef.current;
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
   
       const handleEnded = () => setIsAudioPlaying(false);
-      currentAudioRef.addEventListener('ended', handleEnded);
+      audio.addEventListener('ended', handleEnded);
   
-      // Cleanup function: This is crucial to prevent memory leaks and errors.
+      // Cleanup function
       return () => {
-        if (currentAudioRef) {
-          currentAudioRef.pause();
-          currentAudioRef.removeEventListener('ended', handleEnded);
-          audioRef.current = null; // Set the ref to null
-        }
+        audio.pause();
+        audio.removeEventListener('ended', handleEnded);
+        audioRef.current = null;
       };
     } else {
       // If audioUrl is null, ensure any existing audio is stopped and reset.
@@ -636,7 +634,3 @@ export default function HomePageClient() {
     </div>
   );
 }
-
-    
-
-    
