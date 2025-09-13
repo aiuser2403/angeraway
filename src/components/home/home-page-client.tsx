@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Image as ImageIcon, Mic, FileText, Smile, Square, Trash2, X, Music, RefreshCw, Mail } from 'lucide-react';
+import { Image as ImageIcon, Mic, FileText, Smile, Square, Trash2, X, Music, RefreshCw } from 'lucide-react';
 import FlushPotIcon from '@/components/icons/flush-pot-icon';
 import { useToast } from '@/hooks/use-toast';
 import * as Tone from 'tone';
@@ -295,32 +295,6 @@ export default function HomePageClient() {
       }
     }, 2000);
   };
-  
-  const handleEmail = () => {
-    const subject = "My thoughts from Anger Away";
-    let body = angerText;
-
-    if (!angerText && !mediaPreview && !audioUrl) {
-      toast({
-        variant: "destructive",
-        title: "Nothing to email",
-        description: "Write a message, upload an image, or record audio first.",
-      });
-      return;
-    }
-    
-    // Note: mailto: does not reliably support attachments from data URIs.
-    // We will only include the text.
-    if (mediaPreview) {
-      body += "\n\n[An image was included with this entry, but cannot be attached to this email.]";
-    }
-    if (audioUrl) {
-      body += "\n\n[A recording was included with this entry, but cannot be attached to this email.]";
-    }
-
-    const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.location.href = mailtoLink;
-  };
 
   const handleReset = () => {
     setPageState('idle');
@@ -496,10 +470,6 @@ export default function HomePageClient() {
             transition={{ type: 'spring', stiffness: 50 }}
             className="fixed bottom-10 right-10 flex gap-4"
           >
-            <Button size="lg" variant="outline" className="rounded-full shadow-2xl" onClick={handleEmail}>
-              <Mail className="mr-2" />
-              Email it to yourself
-            </Button>
             <Button size="lg" className="rounded-full shadow-2xl" onClick={handleFlush}>
               <FlushPotIcon className="mr-2" />
               Flush It Out
@@ -563,6 +533,3 @@ export default function HomePageClient() {
     </div>
   );
 }
-
-    
-    
