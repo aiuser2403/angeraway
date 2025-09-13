@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Image as ImageIcon, Mic, FileText, Square, Trash2, X, Play, Pause } from 'lucide-react';
+import { Image as ImageIcon, Mic, FileText, Square, Trash2, X, Play, Pause, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import ImageCropDialog from './image-crop-dialog';
@@ -14,7 +14,7 @@ import PleasantSmileyIcon from '@/components/icons/pleasant-smiley-icon';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import ToiletIcon from '../icons/toilet-icon';
 
-type PageState = 'idle' | 'flushing' | 'flushed';
+type PageState = 'idle' | 'confirming' | 'flushing' | 'flushed';
 type RecordingState = 'idle' | 'recording' | 'recorded' | 'denied';
 
 const MAX_FILE_SIZE_MB = 10;
@@ -293,13 +293,18 @@ export default function HomePageClient() {
     initial: { opacity: 1, y: 0, scale: 1 },
     flushing: { opacity: 0, y: '100vh', scale: 0.2, transition: { duration: 2, ease: "easeInOut" } },
   };
+
+  const handleConfirm = () => {
+    setPageState('confirming');
+  }
+
   
   const renderMediaContent = (isFlushing = false) => {
     if (mediaPreview) {
         return (
           <div className="w-full h-full relative group">
-            <Image src={mediaPreview} alt="Anger media preview" layout="fill" className="object-contain rounded-md" />
-            {!isFlushing && (
+            <Image src={mediaPreview} alt="Anger media preview" fill className="object-contain rounded-md" />
+            {!isFlushing && pageState === 'idle' && (
               <div className="absolute top-2 right-2 z-10">
                   <Button size="icon" variant="destructive" onClick={handleDiscardImage} className="rounded-full h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
                       <X className="h-4 w-4" />
@@ -330,6 +335,18 @@ export default function HomePageClient() {
                 </div>
             </div>
             <p className="text-lg mt-4 mb-4">Your recording is ready.</p>
+             {pageState === 'idle' && (
+                <div className="border-t pt-4 flex gap-4 w-full">
+                    <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Discard
+                    </Button>
+                    <Button onClick={handleListen} variant="outline" className="w-full justify-center">
+                        {isAudioPlaying ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
+                        {isAudioPlaying ? 'Stop' : 'Listen'}
+                    </Button>
+                </div>
+            )}
           </div>
         );
       }
@@ -388,20 +405,6 @@ export default function HomePageClient() {
                     </div>
                     
                     <div className="flex-shrink-0 flex flex-col gap-4 mt-4">
-                        
-                        {audioUrl && recordingState === 'recorded' && (
-                        <div className="border-t pt-4 flex gap-4 w-full">
-                            <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Discard
-                            </Button>
-                            <Button onClick={handleListen} variant="outline" className="w-full justify-center">
-                                {isAudioPlaying ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
-                                {isAudioPlaying ? 'Stop' : 'Listen'}
-                            </Button>
-                            </div>
-                        )}
-
                         <div className="flex gap-4">
                             <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center">
                             <ImageIcon className="mr-2 h-4 w-4" />
@@ -428,7 +431,6 @@ export default function HomePageClient() {
                             )}
                             </Button>
                         </div>
-
                     </div>
                 </div>
                 </CardContent>
@@ -439,11 +441,11 @@ export default function HomePageClient() {
             <Button 
                 size="lg" 
                 className="rounded-full shadow-2xl bg-primary hover:bg-primary/90 text-primary-foreground h-16 px-10 text-xl" 
-                onClick={handleFlush}
+                onClick={handleConfirm}
                 disabled={!isContentPresent}
             >
-                <ToiletIcon className="mr-3 h-8 w-8" />
-                Flush It Out
+                <Check className="mr-3 h-8 w-8" />
+                Done Sharing
             </Button>
         </div>
         
@@ -459,70 +461,139 @@ export default function HomePageClient() {
     </AnimatePresence>
   );
 
-  const renderFlushingState = () => (
-     <div className="fixed inset-0 flex items-center justify-center z-50 overflow-hidden">
-        {toiletImage && (
-            <Image
-                src={toiletImage.imageUrl}
-                alt={toiletImage.description}
-                layout="fill"
-                objectFit="cover"
-                data-ai-hint={toiletImage.imageHint}
-                unoptimized
+  const renderConfirmingState = () => (
+     <motion.div 
+        key="confirming"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full"
+    >
+        <div className="text-center mb-12">
+            <h1 className="text-5xl md:text-7xl font-headline font-bold text-primary">Ready to let it go?</h1>
+            <p className="mt-2 text-lg text-muted-foreground">This action cannot be undone.</p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl mx-auto">
+            <Card>
+                <CardHeader>
+                <CardTitle className="flex items-center gap-2 font-headline">
+                    <FileText className="text-accent" />
+                    Your Words
+                </CardTitle>
+                </CardHeader>
+                <CardContent>
+                <Textarea
+                    readOnly
+                    value={angerText}
+                    className="min-h-[500px] resize-none"
+                />
+                </CardContent>
+            </Card>
+            
+            <Card>
+                <CardHeader>
+                <CardTitle className="flex items-center gap-2 font-headline">
+                    <Mic className="text-accent" />
+                    Your Media
+                </CardTitle>
+                </CardHeader>
+                <CardContent>
+                <div className="flex flex-col space-y-4 h-full justify-between min-h-[500px]">
+                    <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-full">
+                        {renderMediaContent()}
+                    </div>
+                </div>
+                </CardContent>
+            </Card>
+        </div>
+        
+        <div className="mt-12 text-center flex flex-col items-center gap-4">
+            <Button 
+                size="lg" 
+                className="rounded-full shadow-2xl bg-primary hover:bg-primary/90 text-primary-foreground h-16 px-10 text-xl" 
+                onClick={handleFlush}
+            >
+                <ToiletIcon className="mr-3 h-8 w-8" />
+                Flush It Out
+            </Button>
+             <Button variant="link" onClick={() => setPageState('idle')}>Go back and edit</Button>
+        </div>
+        
+        {rawImageForCrop && (
+            <ImageCropDialog 
+            isOpen={isCropDialogOpen}
+            onClose={handleCropDialogClose}
+            imageSrc={rawImageForCrop}
+            onSave={handleImageSave}
             />
         )}
-        <div className="absolute inset-0 bg-black/30" />
-        <div className="relative w-full max-w-6xl mx-auto h-full p-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full h-full items-center">
-                <motion.div
-                    animate={angerText ? "flushing" : "initial"}
-                    variants={contentVariants}
-                    className="w-full"
-                >
-                    {angerText && (
-                        <Card>
-                            <CardHeader>
-                            <CardTitle className="flex items-center gap-2 font-headline">
-                                <FileText className="text-accent" />
-                                Your Words
-                            </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                            <Textarea
-                                readOnly
-                                value={angerText}
-                                className="min-h-[500px] resize-none"
-                            />
-                            </CardContent>
-                        </Card>
-                    )}
-                </motion.div>
-                <motion.div
-                    animate={mediaPreview || audioUrl ? "flushing" : "initial"}
-                    variants={contentVariants}
-                    className="w-full"
-                >
-                    {(mediaPreview || audioUrl) && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2 font-headline">
-                                    <Mic className="text-accent" />
-                                    Your Media
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="flex flex-col space-y-4 h-full justify-between min-h-[500px]">
-                                    <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-full">
-                                        {renderMediaContent(true)}
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
-                </motion.div>
-            </div>
+    </motion.div>
+  );
+
+  const renderFlushingState = () => (
+    <div className="fixed inset-0 flex items-center justify-center z-50 overflow-hidden">
+      {toiletImage && (
+        <Image
+          src={toiletImage.imageUrl}
+          alt={toiletImage.description}
+          fill
+          className="object-cover"
+          data-ai-hint={toiletImage.imageHint}
+          unoptimized
+        />
+      )}
+      <div className="absolute inset-0 bg-black/30" />
+      <div className="relative w-full max-w-6xl mx-auto h-full p-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full h-full items-center">
+          <motion.div
+            animate={angerText ? "flushing" : "initial"}
+            variants={contentVariants}
+            className="w-full"
+          >
+            {angerText && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 font-headline">
+                    <FileText className="text-accent" />
+                    Your Words
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Textarea
+                    readOnly
+                    value={angerText}
+                    className="min-h-[500px] resize-none"
+                  />
+                </CardContent>
+              </Card>
+            )}
+          </motion.div>
+          <motion.div
+            animate={mediaPreview || audioUrl ? "flushing" : "initial"}
+            variants={contentVariants}
+            className="w-full"
+          >
+            {(mediaPreview || audioUrl) && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 font-headline">
+                    {(mediaPreview || audioUrl) && <ImageIcon className="text-accent" />}
+                    Your Media
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col space-y-4 h-full justify-between min-h-[500px]">
+                    <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-full">
+                      {renderMediaContent(true)}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </motion.div>
         </div>
       </div>
+    </div>
   );
   
   const renderFlushedState = () => (
@@ -547,6 +618,7 @@ export default function HomePageClient() {
     <div className="container mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-[calc(100vh-80px)]">
       <AnimatePresence mode="wait">
         {pageState === 'idle' && <motion.div key="idle-container" className="w-full">{renderIdleState()}</motion.div>}
+        {pageState === 'confirming' && <motion.div key="confirming-container" className="w-full">{renderConfirmingState()}</motion.div>}
         {pageState === 'flushing' && <motion.div key="flushing-container">{renderFlushingState()}</motion.div>}
         {pageState === 'flushed' && <motion.div key="flushed-container">{renderFlushedState()}</motion.div>}
       </AnimatePresence>
@@ -556,3 +628,5 @@ export default function HomePageClient() {
     </div>
   );
 }
+
+    
