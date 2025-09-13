@@ -24,7 +24,7 @@ const initialQuotes = [
 ];
 
 export default function MotivationalQuotesPage() {
-  const backgroundImage = PlaceHolderImages.find(img => img.id === 'quote-background-2');
+  const backgroundImage = PlaceHolderImages.find(img => img.id === 'quote-background-1');
   
   return (
     <div className="relative min-h-[calc(100vh-80px)] flex items-center justify-center overflow-hidden">

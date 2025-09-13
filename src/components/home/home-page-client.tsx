@@ -123,7 +123,7 @@ export default function HomePageClient() {
 
   useEffect(() => {
     // Pre-load the flush audio
-    const audio = new Audio('https://firebasestorage.googleapis.com/v0/b/prototyper-de2a8.appspot.com/o/public%2Ftoilet-flush.mp3?alt=media&token=85c64287-2598-4444-8461-95ed158f3103');
+    const audio = new Audio('https://firebasestorage.googleapis.com/v0/b/prototyper-de2a8.appspot.com/o/public%2Ftoilet-flush-sound.mp3?alt=media&token=86a761ad-c841-499c-88e2-8874135d518d');
     audio.preload = 'auto';
     flushAudioRef.current = audio;
 
@@ -518,7 +518,7 @@ export default function HomePageClient() {
                 <CardContent>
                 <div className="flex flex-col space-y-4 h-full justify-between min-h-[500px]">
                     <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-full">
-                        {renderMediaContent()}
+                        {renderMediaContent(true)}
                     </div>
                 </div>
                 </CardContent>
@@ -637,5 +637,3 @@ export default function HomePageClient() {
     </div>
   );
 }
-
-    
