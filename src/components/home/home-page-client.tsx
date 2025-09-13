@@ -21,7 +21,15 @@ const MAX_FILE_SIZE_MB = 10;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 const SUPPORTED_IMAGE_FORMATS = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
 const SUPPORTED_AUDIO_FORMATS = ['audio/wav', 'audio/x-aiff', 'audio/x-pcm', 'audio/mpeg', 'audio/webm'];
+const STORAGE_KEY = 'anger-away-data';
+const EXPIRATION_MINUTES = 30;
 
+type StoredData = {
+  angerText: string;
+  mediaPreview: string | null;
+  audioUrl: string | null;
+  timestamp: number;
+};
 
 export default function HomePageClient() {
   const [angerText, setAngerText] = useState('');
@@ -48,6 +56,58 @@ export default function HomePageClient() {
   const isContentPresent = useMemo(() => {
     return angerText.trim().length > 0 || mediaPreview !== null || audioUrl !== null;
   }, [angerText, mediaPreview, audioUrl]);
+
+  const saveDataToLocalStorage = (data: Partial<StoredData>) => {
+    try {
+      const currentData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') as Partial<StoredData>;
+      const newData = { ...currentData, ...data, timestamp: Date.now() };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+    } catch (error) {
+      console.error("Error saving to local storage:", error);
+    }
+  };
+
+  useEffect(() => {
+    try {
+      const storedDataString = localStorage.getItem(STORAGE_KEY);
+      if (storedDataString) {
+        const storedData: StoredData = JSON.parse(storedDataString);
+        const now = Date.now();
+        const thirtyMinutesInMillis = EXPIRATION_MINUTES * 60 * 1000;
+
+        if (now - storedData.timestamp < thirtyMinutesInMillis) {
+          setAngerText(storedData.angerText || '');
+          setMediaPreview(storedData.mediaPreview || null);
+          if (storedData.audioUrl) {
+            // Re-create blob URL as it might be revoked
+            fetch(storedData.audioUrl)
+              .then(res => res.blob())
+              .then(blob => {
+                const url = URL.createObjectURL(blob);
+                setAudioUrl(url);
+                setRecordingState('recorded');
+              })
+              .catch(() => {
+                // If fetch fails, just ignore the audio
+                setAudioUrl(null);
+                setRecordingState('idle');
+              });
+          }
+        } else {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading from local storage:", error);
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (angerText) {
+      saveDataToLocalStorage({ angerText });
+    }
+  }, [angerText]);
 
   useEffect(() => {
     if (inactivityTimerRef.current) {
@@ -128,7 +188,9 @@ export default function HomePageClient() {
       const croppedImageBlob = await getCroppedImg(rawImageForCrop, croppedAreaPixels);
       const reader = new FileReader();
       reader.onloadend = () => {
-        setMediaPreview(reader.result as string);
+        const dataUrl = reader.result as string;
+        setMediaPreview(dataUrl);
+        saveDataToLocalStorage({ mediaPreview: dataUrl });
         setIsCropDialogOpen(false);
         setRawImageForCrop(null);
       };
@@ -158,6 +220,7 @@ export default function HomePageClient() {
       if (audioUrl) {
         URL.revokeObjectURL(audioUrl);
         setAudioUrl(null);
+        saveDataToLocalStorage({ audioUrl: null });
       }
       audioChunksRef.current = [];
       
@@ -171,8 +234,15 @@ export default function HomePageClient() {
 
       mediaRecorderRef.current.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const url = URL.createObjectURL(audioBlob);
-        setAudioUrl(url);
+        
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const base64Audio = reader.result as string;
+            setAudioUrl(base64Audio);
+            saveDataToLocalStorage({ audioUrl: base64Audio });
+        };
+        reader.readAsDataURL(audioBlob);
+
         setRecordingState('recorded');
         stream.getTracks().forEach(track => track.stop());
       };
@@ -211,6 +281,7 @@ export default function HomePageClient() {
       URL.revokeObjectURL(audioUrl);
     }
     setAudioUrl(null);
+    saveDataToLocalStorage({ audioUrl: null });
     setRecordingState('idle');
     audioChunksRef.current = [];
     startRecording();
@@ -221,12 +292,14 @@ export default function HomePageClient() {
       URL.revokeObjectURL(audioUrl);
     }
     setAudioUrl(null);
+    saveDataToLocalStorage({ audioUrl: null });
     setRecordingState('idle');
     audioChunksRef.current = [];
   }
 
   const handleDiscardImage = () => {
     setMediaPreview(null);
+    saveDataToLocalStorage({ mediaPreview: null });
     if(fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -251,6 +324,11 @@ export default function HomePageClient() {
         URL.revokeObjectURL(audioUrl);
       }
       setAudioUrl(null);
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch (error) {
+        console.error("Error removing from local storage:", error);
+      }
     }, 2000);
   };
   
@@ -377,32 +455,33 @@ export default function HomePageClient() {
                         </div>
                     )}
 
-                    {recordingState !== 'recording' && (
-                      <div className="flex gap-4">
-                          <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center">
-                            <ImageIcon className="mr-2 h-4 w-4" />
-                            {mediaPreview ? 'Change Image' : 'Upload Image'}
-                          </Button>
-                          <input 
-                            type="file" 
-                            accept={SUPPORTED_IMAGE_FORMATS.join(',')} 
-                            ref={fileInputRef} 
-                            onChange={handleFileChange} 
-                            className="hidden" 
-                          />
-                          <Button variant="outline" onClick={handleRecordControl} className="w-full justify-center">
-                            <Mic className="mr-2 h-4 w-4" />
-                            {audioUrl ? 'Re-record' : 'Record Audio'}
-                          </Button>
-                      </div>
-                    )}
-
-                    {recordingState === 'recording' && (
-                        <Button variant="destructive" onClick={handleRecordControl} className="w-full justify-center">
-                            <Square className="mr-2 h-4 w-4" />
-                            Stop Recording
+                    <div className="flex gap-4">
+                        <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center">
+                          <ImageIcon className="mr-2 h-4 w-4" />
+                          {mediaPreview ? 'Change Image' : 'Upload Image'}
                         </Button>
-                    )}
+                        <input 
+                          type="file" 
+                          accept={SUPPORTED_IMAGE_FORMATS.join(',')} 
+                          ref={fileInputRef} 
+                          onChange={handleFileChange} 
+                          className="hidden" 
+                        />
+                        <Button variant={recordingState === 'recording' ? 'destructive' : 'outline'} onClick={handleRecordControl} className="w-full justify-center">
+                          {recordingState === 'recording' ? (
+                              <>
+                                <Square className="mr-2 h-4 w-4" />
+                                Stop Recording
+                              </>
+                          ) : (
+                              <>
+                                <Mic className="mr-2 h-4 w-4" />
+                                {audioUrl ? 'Re-record' : 'Record Audio'}
+                              </>
+                          )}
+                        </Button>
+                    </div>
+
                   </div>
               </div>
             </CardContent>
@@ -501,3 +580,5 @@ export default function HomePageClient() {
     </div>
   );
 }
+
+  
