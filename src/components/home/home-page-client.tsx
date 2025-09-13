@@ -32,6 +32,8 @@ export default function HomePageClient() {
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [pageState, setPageState] = useState<PageState>('idle');
+  const [rawImageForCrop, setRawImageForCrop] = useState<string | null>(null);
+
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -91,7 +93,7 @@ export default function HomePageClient() {
       
       const reader = new FileReader();
       reader.onloadend = () => {
-        setMediaPreview(reader.result as string);
+        setRawImageForCrop(reader.result as string);
         setIsCropDialogOpen(true);
       };
       reader.readAsDataURL(file);
@@ -99,9 +101,9 @@ export default function HomePageClient() {
   };
 
   const onCropComplete = useCallback(async (croppedAreaPixels: any) => {
-    if (!mediaPreview) return;
+    if (!rawImageForCrop) return;
     try {
-      const croppedImageBlob = await getCroppedImg(mediaPreview, croppedAreaPixels);
+      const croppedImageBlob = await getCroppedImg(rawImageForCrop, croppedAreaPixels);
       const reader = new FileReader();
       reader.onloadend = () => {
         setMediaPreview(reader.result as string);
@@ -111,6 +113,7 @@ export default function HomePageClient() {
       const file = new File([croppedImageBlob], 'cropped-image.jpeg', { type: 'image/jpeg' });
       setAngerMedia(file);
       setIsCropDialogOpen(false);
+      setRawImageForCrop(null);
     } catch (e) {
       console.error(e);
       toast({
@@ -119,9 +122,10 @@ export default function HomePageClient() {
         description: 'Something went wrong while cropping the image. Please try again.',
       });
       setIsCropDialogOpen(false);
+      setRawImageForCrop(null);
       setMediaPreview(null);
     }
-  }, [mediaPreview, toast]);
+  }, [rawImageForCrop, toast]);
 
   const startRecording = async () => {
     try {
@@ -198,6 +202,7 @@ export default function HomePageClient() {
   const handleDiscardImage = () => {
     setAngerMedia(null);
     setMediaPreview(null);
+    setRawImageForCrop(null);
     if(fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -258,7 +263,7 @@ export default function HomePageClient() {
         <div className="text-center text-muted-foreground">
           <ImageIcon className="mx-auto h-12 w-12" />
           <p className="mt-2">Upload a photo to express your anger.</p>
-          <p className="text-xs mt-1">Supports JPEG, PNG, WEBP, GIF, SVG. Max 10MB.</p>
+          <p className="text-xs mt-1 text-muted-foreground/80">Supports JPEG, PNG, WEBP, GIF, SVG. Max 10MB.</p>
         </div>
     );
   };
@@ -270,7 +275,7 @@ export default function HomePageClient() {
         <p className="mt-2 text-lg text-muted-foreground">Write or record why you're angry.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-4xl mx-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl mx-auto">
         <Card className="shadow-lg transform hover:scale-105 transition-transform duration-300">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 font-headline">
@@ -281,7 +286,7 @@ export default function HomePageClient() {
           <CardContent>
             <Textarea
               placeholder="Describe why you’re angry…"
-              className="h-96 resize-none"
+              className="h-[450px] resize-none"
               value={angerText}
               onChange={(e) => setAngerText(e.target.value)}
               aria-label="Write your anger"
@@ -297,7 +302,7 @@ export default function HomePageClient() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-             <div className="flex flex-col space-y-4 h-full justify-between min-h-96">
+             <div className="flex flex-col space-y-4 h-full justify-between min-h-[450px]">
                 <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-64">
                   {renderMediaContent()}
                 </div>
@@ -325,7 +330,7 @@ export default function HomePageClient() {
 
                   {recordingState !== 'recording' && (
                      <div className="flex gap-4">
-                        <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center">
+                        <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center" disabled={!!audioUrl}>
                           <ImageIcon className="mr-2 h-4 w-4" />
                           {mediaPreview ? 'Change Image' : 'Upload Image'}
                         </Button>
@@ -336,9 +341,9 @@ export default function HomePageClient() {
                           onChange={handleFileChange} 
                           className="hidden" 
                         />
-                         <Button variant="outline" onClick={handleRecordControl} className="w-full justify-center" disabled={!!mediaPreview || recordingState === 'recorded'}>
+                         <Button variant="outline" onClick={handleRecordControl} className="w-full justify-center" disabled={!!mediaPreview}>
                           <Mic className="mr-2 h-4 w-4" />
-                          Record Audio
+                          {audioUrl ? 'Re-record' : 'Record Audio'}
                         </Button>
                     </div>
                   )}
@@ -372,16 +377,17 @@ export default function HomePageClient() {
         )}
       </AnimatePresence>
       
-      {mediaPreview && (
+      {rawImageForCrop && (
         <ImageCropDialog 
           isOpen={isCropDialogOpen}
           onClose={() => {
             setIsCropDialogOpen(false);
             if (!angerMedia) { // If crop was cancelled
               setMediaPreview(null);
+              setRawImageForCrop(null);
             }
           }}
-          imageSrc={mediaPreview}
+          imageSrc={rawImageForCrop}
           onCropComplete={onCropComplete}
         />
       )}
@@ -429,3 +435,5 @@ export default function HomePageClient() {
     </div>
   );
 }
+
+    
