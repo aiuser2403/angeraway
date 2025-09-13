@@ -1,12 +1,12 @@
 
 'use client';
 
-import { useState, useRef, useMemo, useEffect } from 'react';
+import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Image as ImageIcon, Mic, FileText, Smile, Square, Trash2, X, Music, RefreshCw } from 'lucide-react';
+import { Image as ImageIcon, Mic, FileText, Smile, Square, Trash2, X, Music, RefreshCw, Play, Pause } from 'lucide-react';
 import FlushPotIcon from '@/components/icons/flush-pot-icon';
 import { useToast } from '@/hooks/use-toast';
 import * as Tone from 'tone';
@@ -40,12 +40,13 @@ export default function HomePageClient() {
   const [rawImageForCrop, setRawImageForCrop] = useState<string | null>(null);
   const [showDoneSharing, setShowDoneSharing] = useState(false);
   const [doneSharingClicked, setDoneSharingClicked] = useState(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   const { toast } = useToast();
@@ -101,6 +102,21 @@ export default function HomePageClient() {
     }
   }, [angerText, mediaPreview, audioUrl, isContentPresent, saveDataToLocalStorage]);
 
+  useEffect(() => {
+    if (audioUrl) {
+        const audioElement = new Audio(audioUrl);
+        audioRef.current = audioElement;
+
+        const handleEnded = () => setIsAudioPlaying(false);
+        audioElement.addEventListener('ended', handleEnded);
+
+        return () => {
+            audioElement.removeEventListener('ended', handleEnded);
+            audioRef.current = null;
+        }
+    }
+  }, [audioUrl]);
+
 
   useEffect(() => {
     if (inactivityTimerRef.current) {
@@ -139,7 +155,6 @@ export default function HomePageClient() {
 
     return () => {
       synth.dispose();
-      // No need to revoke blob URLs for audio as we are using data URLs
     };
   }, []);
 
@@ -173,12 +188,14 @@ export default function HomePageClient() {
     }
   };
   
-  const handleImageSave = (newImage: string | null) => {
-    setMediaPreview(newImage);
-    saveDataToLocalStorage({ mediaPreview: newImage });
+  const handleImageSave = useCallback((newImage: string | null) => {
+    if (newImage) {
+      setMediaPreview(newImage);
+      saveDataToLocalStorage({ mediaPreview: newImage });
+    }
     setIsCropDialogOpen(false);
     setRawImageForCrop(null);
-  };
+  }, [saveDataToLocalStorage]);
 
   const handleCropDialogClose = () => {
     setIsCropDialogOpen(false);
@@ -250,14 +267,29 @@ export default function HomePageClient() {
   
   const handleRerecord = () => {
     setAudioUrl(null);
+    setIsAudioPlaying(false);
     saveDataToLocalStorage({ audioUrl: null });
     setRecordingState('idle');
     audioChunksRef.current = [];
     startRecording();
   };
+  
+  const handleListen = () => {
+    if (audioRef.current) {
+        if (isAudioPlaying) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+            setIsAudioPlaying(false);
+        } else {
+            audioRef.current.play();
+            setIsAudioPlaying(true);
+        }
+    }
+  };
 
   const handleDiscardAudio = () => {
     setAudioUrl(null);
+    setIsAudioPlaying(false);
     saveDataToLocalStorage({ audioUrl: null });
     setRecordingState('idle');
     audioChunksRef.current = [];
@@ -335,8 +367,7 @@ export default function HomePageClient() {
         return (
           <div className="flex flex-col items-center justify-center flex-1 h-full text-center p-4">
             <Music className="h-16 w-16 text-primary" />
-            <p className="text-lg mt-4 mb-4">Listen to your recording:</p>
-            <audio ref={audioRef} src={audioUrl} controls className="w-full" />
+            <p className="text-lg mt-4 mb-4">Your recording is ready.</p>
           </div>
         );
       }
@@ -403,11 +434,11 @@ export default function HomePageClient() {
                       <div className="border-t pt-4 flex gap-4 w-full">
                           <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
                             <Trash2 className="mr-2 h-4 w-4" />
-                            Discard Audio
+                            Discard
                           </Button>
-                          <Button onClick={handleRerecord} className="w-full justify-center">
-                            <RefreshCw className="mr-2 h-4 w-4" />
-                            Re-record
+                           <Button onClick={handleListen} variant="outline" className="w-full justify-center">
+                              {isAudioPlaying ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
+                              {isAudioPlaying ? 'Stop' : 'Listen'}
                           </Button>
                         </div>
                     )}
