@@ -22,7 +22,7 @@ const PleasantSmileyIcon = React.forwardRef<
         strokeWidth="1.5"
       />
       <path
-        d="M14.994 15.5c-.556-1-1.48-1.5-2.993-1.5s-2.437.5-2.994 1.5"
+        d="M9.006 14.5c.556 1 1.48 1.5 2.994 1.5s2.438-.5 2.994-1.5"
         stroke="hsl(var(--accent))"
         strokeWidth="1.5"
         strokeLinecap="round"
