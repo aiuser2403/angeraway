@@ -72,13 +72,14 @@ export default function HomePageClient() {
   useEffect(() => {
     const synth = new Tone.NoiseSynth({
       noise: {
-        type: 'brown',
+        type: 'white',
+        playbackRate: 0.1,
       },
       envelope: {
-        attack: 0.05,
-        decay: 0.8,
-        sustain: 0.1,
-        release: 2,
+        attack: 0.005,
+        decay: 0.3,
+        sustain: 0,
+        release: 1,
       },
     }).toDestination();
     setFlushSynth(synth);
@@ -89,7 +90,7 @@ export default function HomePageClient() {
         URL.revokeObjectURL(audioUrl);
       }
     };
-  }, [audioUrl]);
+  }, []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -125,11 +126,11 @@ export default function HomePageClient() {
     if (!rawImageForCrop) return;
     try {
       const croppedImageBlob = await getCroppedImg(rawImageForCrop, croppedAreaPixels);
-      if (mediaPreview) {
-        URL.revokeObjectURL(mediaPreview);
-      }
-      const previewUrl = URL.createObjectURL(croppedImageBlob);
-      setMediaPreview(previewUrl);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+          setMediaPreview(reader.result as string);
+      };
+      reader.readAsDataURL(croppedImageBlob);
     } catch (e) {
       console.error(e);
       toast({
@@ -224,9 +225,6 @@ export default function HomePageClient() {
   }
 
   const handleDiscardImage = () => {
-    if (mediaPreview) {
-        URL.revokeObjectURL(mediaPreview);
-    }
     setMediaPreview(null);
     if(fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -241,14 +239,14 @@ export default function HomePageClient() {
     setPageState('flushing');
 
     if (flushSynth) {
-      flushSynth.triggerAttackRelease("2s");
+      flushSynth.triggerAttackRelease("1s");
     }
 
     setTimeout(() => {
       setPageState('flushed');
       setAngerText('');
-      handleDiscardImage();
-      handleDiscardAudio();
+      setMediaPreview(null);
+      setAudioUrl(null);
     }, 2000);
   };
   
@@ -261,7 +259,14 @@ export default function HomePageClient() {
 
   const handleReset = () => {
     setPageState('idle');
+    setShowDoneSharing(false);
+    setDoneSharingClicked(false);
   }
+
+  const contentVariants = {
+    initial: { opacity: 1, scale: 1 },
+    flushing: { opacity: 0, scale: 0.8, transition: { duration: 1 } },
+  };
   
   const renderMediaContent = () => {
     if (mediaPreview) {
@@ -313,82 +318,92 @@ export default function HomePageClient() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl mx-auto">
-        <Card className="shadow-lg transform hover:scale-[1.02] transition-transform duration-300">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 font-headline">
-              <FileText className="text-accent" />
-              Write it down
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Textarea
-              placeholder="Describe why you’re angry…"
-              className="min-h-[500px] resize-none"
-              value={angerText}
-              onChange={(e) => setAngerText(e.target.value)}
-              aria-label="Write your anger"
-            />
-          </CardContent>
-        </Card>
+        <motion.div
+          animate={pageState === 'flushing' && angerText ? 'flushing' : 'initial'}
+          variants={contentVariants}
+        >
+          <Card className="shadow-lg transform hover:scale-[1.02] transition-transform duration-300">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 font-headline">
+                <FileText className="text-accent" />
+                Write it down
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                placeholder="Describe why you’re angry…"
+                className="min-h-[500px] resize-none"
+                value={angerText}
+                onChange={(e) => setAngerText(e.target.value)}
+                aria-label="Write your anger"
+              />
+            </CardContent>
+          </Card>
+        </motion.div>
         
-        <Card className="shadow-lg transform hover:scale-[1.02] transition-transform duration-300">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 font-headline">
-              <Mic className="text-accent" />
-              Upload or Record
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-             <div className="flex flex-col space-y-4 h-full justify-between min-h-[500px]">
-                <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-full">
-                  {renderMediaContent()}
-                </div>
-                
-                <div className="flex-shrink-0 flex flex-col gap-4 mt-4">
+        <motion.div
+          animate={pageState === 'flushing' && (mediaPreview || audioUrl) ? 'flushing' : 'initial'}
+          variants={contentVariants}
+        >
+          <Card className="shadow-lg transform hover:scale-[1.02] transition-transform duration-300">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 font-headline">
+                <Mic className="text-accent" />
+                Upload or Record
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col space-y-4 h-full justify-between min-h-[500px]">
+                  <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-full">
+                    {renderMediaContent()}
+                  </div>
                   
-                  {audioUrl && recordingState !== 'recording' && (
-                     <div className="border-t pt-4 flex gap-4 w-full">
-                        <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Discard Audio
-                        </Button>
-                        <Button onClick={handleRerecord} className="w-full justify-center">
-                          <RefreshCw className="mr-2 h-4 w-4" />
-                          Re-record
-                        </Button>
+                  <div className="flex-shrink-0 flex flex-col gap-4 mt-4">
+                    
+                    {audioUrl && recordingState !== 'recording' && (
+                      <div className="border-t pt-4 flex gap-4 w-full">
+                          <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Discard Audio
+                          </Button>
+                          <Button onClick={handleRerecord} className="w-full justify-center">
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            Re-record
+                          </Button>
+                        </div>
+                    )}
+
+                    {recordingState !== 'recording' && (
+                      <div className="flex gap-4">
+                          <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center">
+                            <ImageIcon className="mr-2 h-4 w-4" />
+                            {mediaPreview ? 'Change Image' : 'Upload Image'}
+                          </Button>
+                          <input 
+                            type="file" 
+                            accept={SUPPORTED_IMAGE_FORMATS.join(',')} 
+                            ref={fileInputRef} 
+                            onChange={handleFileChange} 
+                            className="hidden" 
+                          />
+                          <Button variant="outline" onClick={handleRecordControl} className="w-full justify-center" disabled={!!mediaPreview}>
+                            <Mic className="mr-2 h-4 w-4" />
+                            {audioUrl ? 'Re-record' : 'Record Audio'}
+                          </Button>
                       </div>
-                  )}
+                    )}
 
-                  {recordingState !== 'recording' && (
-                     <div className="flex gap-4">
-                        <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center">
-                          <ImageIcon className="mr-2 h-4 w-4" />
-                          {mediaPreview ? 'Change Image' : 'Upload Image'}
+                    {recordingState === 'recording' && (
+                        <Button variant="destructive" onClick={handleRecordControl} className="w-full justify-center">
+                            <Square className="mr-2 h-4 w-4" />
+                            Stop Recording
                         </Button>
-                        <input 
-                          type="file" 
-                          accept={SUPPORTED_IMAGE_FORMATS.join(',')} 
-                          ref={fileInputRef} 
-                          onChange={handleFileChange} 
-                          className="hidden" 
-                        />
-                         <Button variant="outline" onClick={handleRecordControl} className="w-full justify-center">
-                          <Mic className="mr-2 h-4 w-4" />
-                          {audioUrl ? 'Re-record' : 'Record Audio'}
-                        </Button>
-                    </div>
-                  )}
-
-                  {recordingState === 'recording' && (
-                      <Button variant="destructive" onClick={handleRecordControl} className="w-full justify-center">
-                          <Square className="mr-2 h-4 w-4" />
-                          Stop Recording
-                      </Button>
-                  )}
-                </div>
-            </div>
-          </CardContent>
-        </Card>
+                    )}
+                  </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
 
       <AnimatePresence>
@@ -407,7 +422,7 @@ export default function HomePageClient() {
         )}
       </AnimatePresence>
       <AnimatePresence>
-        {doneSharingClicked && (
+        {doneSharingClicked && pageState === 'idle' && (
           <motion.div
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -442,11 +457,11 @@ export default function HomePageClient() {
      <motion.div
         key="flushing"
         initial={{ scale: 0.5, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1, rotate: [0, 10, -10, 0] }}
-        transition={{ duration: 1, repeat: Infinity, repeatType: "mirror" }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.5 }}
         className="flex flex-col items-center justify-center text-primary"
       >
-        <FlushPotIcon className="w-32 h-32" />
+        <FlushPotIcon className="w-32 h-32" isFlushing={true} />
         <p className="text-2xl font-headline mt-4">Flushing...</p>
       </motion.div>
   );
@@ -473,7 +488,7 @@ export default function HomePageClient() {
     <div className="container mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-[calc(100vh-80px)]">
       <AnimatePresence mode="wait">
         {pageState === 'idle' && <motion.div key="idle" exit={{ opacity: 0, scale: 0.8 }} transition={{ duration: 0.5 }}>{renderIdleState()}</motion.div>}
-        {pageState === 'flushing' && renderFlushingState()}
+        {pageState === 'flushing' && <motion.div key="flushing-container" exit={{ opacity: 0, scale: 0.8 }} transition={{ duration: 0.5 }}>{renderFlushingState()}</motion.div>}
         {pageState === 'flushed' && renderFlushedState()}
       </AnimatePresence>
        <footer className="w-full mt-12 text-center text-muted-foreground text-sm">
@@ -482,8 +497,3 @@ export default function HomePageClient() {
     </div>
   );
 }
-
-    
-    
-
-    
