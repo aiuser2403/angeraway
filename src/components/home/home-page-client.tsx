@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
@@ -126,6 +125,13 @@ export default function HomePageClient() {
       setMediaPreview(null);
     }
   }, [rawImageForCrop, toast]);
+  
+  const handleCropDialogClose = () => {
+    setIsCropDialogOpen(false);
+    if (!angerMedia) { // If crop was cancelled without saving
+      handleDiscardImage();
+    }
+  }
 
   const startRecording = async () => {
     try {
@@ -314,7 +320,7 @@ export default function HomePageClient() {
                 
                 <div className="flex-shrink-0 flex flex-col gap-4 mt-4">
                   
-                  {audioUrl && !mediaPreview && recordingState !== 'recording' && (
+                  {audioUrl && recordingState !== 'recording' && (
                      <div className="border-t pt-4 flex gap-4 w-full">
                         <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
                           <Trash2 className="mr-2 h-4 w-4" />
@@ -329,7 +335,7 @@ export default function HomePageClient() {
 
                   {recordingState !== 'recording' && (
                      <div className="flex gap-4">
-                        <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center" disabled={!!mediaPreview && !audioUrl}>
+                        <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center">
                           <ImageIcon className="mr-2 h-4 w-4" />
                           {mediaPreview ? 'Change Image' : 'Upload Image'}
                         </Button>
@@ -340,7 +346,7 @@ export default function HomePageClient() {
                           onChange={handleFileChange} 
                           className="hidden" 
                         />
-                         <Button variant="outline" onClick={handleRecordControl} className="w-full justify-center" disabled={!mediaPreview && !!audioUrl}>
+                         <Button variant="outline" onClick={handleRecordControl} className="w-full justify-center">
                           <Mic className="mr-2 h-4 w-4" />
                           {audioUrl ? 'Re-record' : 'Record Audio'}
                         </Button>
@@ -379,12 +385,7 @@ export default function HomePageClient() {
       {rawImageForCrop && (
         <ImageCropDialog 
           isOpen={isCropDialogOpen}
-          onClose={() => {
-            setIsCropDialogOpen(false);
-            if (!angerMedia) { // If crop was cancelled
-              handleDiscardImage();
-            }
-          }}
+          onClose={handleCropDialogClose}
           imageSrc={rawImageForCrop}
           onCropComplete={onCropComplete}
         />
