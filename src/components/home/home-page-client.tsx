@@ -268,7 +268,6 @@ export default function HomePageClient() {
         <div className="text-center text-muted-foreground">
           <ImageIcon className="mx-auto h-12 w-12" />
           <p className="mt-2">Upload a photo to express your anger.</p>
-          <p className="text-xs mt-1 text-muted-foreground/80">Supports JPEG, PNG, WEBP, GIF, SVG. Max 10MB.</p>
         </div>
     );
   };
@@ -433,5 +432,3 @@ export default function HomePageClient() {
     </div>
   );
 }
-
-    
