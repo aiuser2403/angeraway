@@ -99,7 +99,7 @@ export default function HomePageClient() {
         <p className="mt-2 text-lg text-muted-foreground">Write or record why you're angry.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-4xl mx-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl mx-auto">
         <Card className="shadow-lg transform hover:scale-105 transition-transform duration-300">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 font-headline">
@@ -110,7 +110,7 @@ export default function HomePageClient() {
           <CardContent>
             <Textarea
               placeholder="Describe why you’re angry…"
-              className="h-48 resize-none"
+              className="h-80 resize-none"
               value={angerText}
               onChange={(e) => setAngerText(e.target.value)}
               aria-label="Write your anger"
@@ -126,17 +126,19 @@ export default function HomePageClient() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col space-y-4">
-              <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                <ImageIcon className="mr-2 h-4 w-4" />
-                Upload Image
-              </Button>
-              <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-              
-              <Button variant={isRecording ? "destructive" : "outline"} onClick={handleRecord}>
-                <Mic className="mr-2 h-4 w-4" />
-                {isRecording ? "Stop Recording" : "Record Audio"}
-              </Button>
+            <div className="flex flex-col space-y-4 h-full justify-between">
+              <div>
+                <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center">
+                  <ImageIcon className="mr-2 h-4 w-4" />
+                  Upload Image
+                </Button>
+                <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+                
+                <Button variant={isRecording ? "destructive" : "outline"} onClick={handleRecord} className="w-full justify-center mt-4">
+                  <Mic className="mr-2 h-4 w-4" />
+                  {isRecording ? "Stop Recording" : "Record Audio"}
+                </Button>
+              </div>
 
               <p className="text-sm text-muted-foreground text-center pt-2">Upload a photo or record your feelings.</p>
               
