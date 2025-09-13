@@ -8,10 +8,6 @@ export const createImage = (url: string): Promise<HTMLImageElement> =>
     image.src = url;
   });
 
-export function getRadianAngle(degreeValue: number) {
-  return (degreeValue * Math.PI) / 180;
-}
-
 function getMimeType(imageSrc: string): string {
     const match = imageSrc.match(/^data:(image\/[a-z]+);base64,/);
     return match ? match[1] : 'image/jpeg';
@@ -19,8 +15,7 @@ function getMimeType(imageSrc: string): string {
 
 export async function getCroppedImg(
   imageSrc: string,
-  pixelCrop: { x: number; y: number; width: number; height: number },
-  rotation = 0
+  pixelCrop: { x: number; y: number; width: number; height: number }
 ): Promise<Blob> {
   const image = await createImage(imageSrc);
   const canvas = document.createElement('canvas');
@@ -30,20 +25,8 @@ export async function getCroppedImg(
     throw new Error('Could not get canvas context');
   }
 
-  const rotRad = getRadianAngle(rotation);
-
-  const { width: bBoxWidth, height: bBoxHeight } = rotateSize(
-    image.width,
-    image.height,
-    rotation
-  );
-
-  canvas.width = bBoxWidth;
-  canvas.height = bBoxHeight;
-
-  ctx.translate(bBoxWidth / 2, bBoxHeight / 2);
-  ctx.rotate(rotRad);
-  ctx.translate(-image.width / 2, -image.height / 2);
+  canvas.width = image.width;
+  canvas.height = image.height;
 
   ctx.drawImage(image, 0, 0);
 
@@ -70,13 +53,4 @@ export async function getCroppedImg(
   });
 }
 
-function rotateSize(width: number, height: number, rotation: number) {
-    const rotRad = getRadianAngle(rotation);
-
-    return {
-        width:
-        Math.abs(Math.cos(rotRad) * width) + Math.abs(Math.sin(rotRad) * height),
-        height:
-        Math.abs(Math.sin(rotRad) * width) + Math.abs(Math.cos(rotRad) * height),
-    };
-}
+    

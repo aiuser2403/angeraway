@@ -151,7 +151,7 @@ export default function HomePageClient() {
         URL.revokeObjectURL(audioUrl);
       }
     };
-  }, []);
+  }, [audioUrl]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

@@ -12,8 +12,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
-import { Label } from '@/components/ui/label';
 
 type ImageCropDialogProps = {
   isOpen: boolean;
@@ -25,19 +23,10 @@ type ImageCropDialogProps = {
 export default function ImageCropDialog({ isOpen, onClose, imageSrc, onSave }: ImageCropDialogProps) {
   const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [rotation, setRotation] = useState(0);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
 
   const onCropChange = useCallback((location: Point) => {
     setCrop(location);
-  }, []);
-
-  const onZoomChange = useCallback((value: number[]) => {
-    setZoom(value[0]);
-  }, []);
-
-  const onRotationChange = useCallback((value: number[]) => {
-    setRotation(value[0]);
   }, []);
 
   const onCropComplete = useCallback((croppedArea: Area, croppedAreaPixels: Area) => {
@@ -54,50 +43,18 @@ export default function ImageCropDialog({ isOpen, onClose, imageSrc, onSave }: I
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Crop and Adjust Image</DialogTitle>
+          <DialogTitle>Crop Image</DialogTitle>
         </DialogHeader>
         <div className="relative h-96 w-full bg-muted">
           <Cropper
             image={imageSrc}
             crop={crop}
             zoom={zoom}
-            rotation={rotation}
             onCropChange={onCropChange}
             onZoomChange={(zoom) => setZoom(zoom)}
-            onRotationChange={(rotation) => setRotation(rotation)}
             onCropComplete={onCropComplete}
             aspect={undefined}
           />
-        </div>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="zoom" className="text-right">
-              Zoom
-            </Label>
-            <Slider
-              id="zoom"
-              min={1}
-              max={3}
-              step={0.1}
-              value={[zoom]}
-              onValueChange={onZoomChange}
-              className="col-span-3"
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="rotation" className="text-right">
-              Rotation
-            </Label>
-            <Slider
-              id="rotation"
-              min={0}
-              max={360}
-              step={1}
-              value={[rotation]}
-              onValueChange={onRotationChange}
-              className="col-span-3"
-            />
-          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
@@ -107,3 +64,5 @@ export default function ImageCropDialog({ isOpen, onClose, imageSrc, onSave }: I
     </Dialog>
   );
 }
+
+    
