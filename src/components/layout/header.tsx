@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 
 const navLinks = [
   { href: '/still-angry', label: 'Still Angry?' },
-  { href: '/motivational-quotes', label: 'Get Motivated' },
+  { href: '/motivational-quotes', label: 'Things you Already Know' },
 ];
 
 export default function Header() {
