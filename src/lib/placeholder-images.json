@@ -6,6 +6,12 @@
       "description": "A beautiful sunrise over a calm sea, representing hope and a new beginning.",
       "imageUrl": "https://picsum.photos/seed/sunrise/1920/1080",
       "imageHint": "sunrise beach"
+    },
+    {
+      "id": "quote-background-2",
+      "description": "A pleasant and calming beach scene at sunrise.",
+      "imageUrl": "https://picsum.photos/seed/beach/1920/1080",
+      "imageHint": "serene beach"
     }
   ]
 }
