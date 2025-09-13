@@ -57,17 +57,19 @@ export default function HomePageClient() {
     return angerText.trim().length > 0 || mediaPreview !== null || audioUrl !== null;
   }, [angerText, mediaPreview, audioUrl]);
 
-  const saveDataToLocalStorage = (data: Partial<StoredData>) => {
-    try {
-      const currentDataString = localStorage.getItem(STORAGE_KEY);
-      const currentData = currentDataString ? JSON.parse(currentDataString) : {};
-      const newData = { ...currentData, ...data, timestamp: Date.now() };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
-    } catch (error) {
-      console.error("Error saving to local storage:", error);
-    }
-  };
-
+  const saveDataToLocalStorage = useMemo(() => {
+    return (data: Partial<Omit<StoredData, 'timestamp'>>) => {
+      try {
+        const currentDataString = localStorage.getItem(STORAGE_KEY);
+        const currentData = currentDataString ? JSON.parse(currentDataString) : {};
+        const newData = { ...currentData, ...data, timestamp: Date.now() };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+      } catch (error) {
+        console.error("Error saving to local storage:", error);
+      }
+    };
+  }, []);
+  
   useEffect(() => {
     try {
       const storedDataString = localStorage.getItem(STORAGE_KEY);
@@ -80,19 +82,8 @@ export default function HomePageClient() {
           setAngerText(storedData.angerText || '');
           setMediaPreview(storedData.mediaPreview || null);
           if (storedData.audioUrl) {
-            // Re-create blob URL from base64 string
-            fetch(storedData.audioUrl)
-              .then(res => res.blob())
-              .then(blob => {
-                const url = URL.createObjectURL(blob);
-                setAudioUrl(url);
-                setRecordingState('recorded');
-              })
-              .catch(() => {
-                // If fetch fails, just ignore the audio
-                setAudioUrl(null);
-                setRecordingState('idle');
-              });
+              setAudioUrl(storedData.audioUrl);
+              setRecordingState('recorded');
           }
         } else {
           localStorage.removeItem(STORAGE_KEY);
@@ -108,7 +99,8 @@ export default function HomePageClient() {
     if (isContentPresent) {
       saveDataToLocalStorage({ angerText, mediaPreview, audioUrl });
     }
-  }, [angerText, mediaPreview, audioUrl, isContentPresent]);
+  }, [angerText, mediaPreview, audioUrl, isContentPresent, saveDataToLocalStorage]);
+
 
   useEffect(() => {
     if (inactivityTimerRef.current) {
@@ -147,9 +139,7 @@ export default function HomePageClient() {
 
     return () => {
       synth.dispose();
-      if (audioUrl && audioUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(audioUrl);
-      }
+      // No need to revoke blob URLs for audio as we are using data URLs
     };
   }, []);
 
@@ -187,12 +177,11 @@ export default function HomePageClient() {
     if (!rawImageForCrop) return;
     try {
       const croppedImageBlob = await getCroppedImg(rawImageForCrop, croppedAreaPixels);
-      const croppedImageUrl = URL.createObjectURL(croppedImageBlob);
-      setMediaPreview(croppedImageUrl);
       
       const reader = new FileReader();
       reader.onloadend = () => {
         const dataUrl = reader.result as string;
+        setMediaPreview(dataUrl);
         saveDataToLocalStorage({ mediaPreview: dataUrl });
       };
       reader.readAsDataURL(croppedImageBlob);
@@ -222,7 +211,6 @@ export default function HomePageClient() {
   const startRecording = async () => {
     try {
       if (audioUrl) {
-        URL.revokeObjectURL(audioUrl);
         setAudioUrl(null);
         saveDataToLocalStorage({ audioUrl: null });
       }
@@ -281,9 +269,6 @@ export default function HomePageClient() {
   };
   
   const handleRerecord = () => {
-    if(audioUrl) {
-      URL.revokeObjectURL(audioUrl);
-    }
     setAudioUrl(null);
     saveDataToLocalStorage({ audioUrl: null });
     setRecordingState('idle');
@@ -292,9 +277,6 @@ export default function HomePageClient() {
   };
 
   const handleDiscardAudio = () => {
-    if(audioUrl) {
-      URL.revokeObjectURL(audioUrl);
-    }
     setAudioUrl(null);
     saveDataToLocalStorage({ audioUrl: null });
     setRecordingState('idle');
@@ -302,9 +284,6 @@ export default function HomePageClient() {
   }
 
   const handleDiscardImage = () => {
-    if (mediaPreview && mediaPreview.startsWith('blob:')) {
-      URL.revokeObjectURL(mediaPreview);
-    }
     setMediaPreview(null);
     saveDataToLocalStorage({ mediaPreview: null });
     if(fileInputRef.current) {
@@ -326,13 +305,7 @@ export default function HomePageClient() {
     setTimeout(() => {
       setPageState('flushed');
       setAngerText('');
-      if (mediaPreview && mediaPreview.startsWith('blob:')) {
-        URL.revokeObjectURL(mediaPreview);
-      }
       setMediaPreview(null);
-      if (audioUrl && audioUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(audioUrl);
-      }
       setAudioUrl(null);
       setRecordingState('idle');
       try {
@@ -591,7 +564,3 @@ export default function HomePageClient() {
     </div>
   );
 }
-
-    
-
-    
