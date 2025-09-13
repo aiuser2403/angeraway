@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { ArrowRight } from 'lucide-react';
 
 const navLinks = [
   { href: '/still-angry', label: 'Still Angry?' },
@@ -22,24 +23,28 @@ export default function Header() {
             Anger Away
           </h1>
         </Link>
-        <nav className="hidden md:flex items-center space-x-2">
-          {navLinks.map((link) => (
-            <Button
-              key={link.href}
-              variant="ghost"
-              asChild
-              className={cn(
-                'text-sm font-medium',
-                pathname === link.href ? 'text-primary' : 'text-muted-foreground'
-              )}
-            >
-              <Link href={link.href}>{link.label}</Link>
+        <nav className="flex items-center space-x-2">
+          <div className="hidden md:flex items-center space-x-2">
+            {navLinks.map((link) => (
+              <Button
+                key={link.href}
+                variant="ghost"
+                asChild
+                className={cn(
+                  'text-sm font-medium',
+                  pathname === link.href ? 'text-primary' : 'text-muted-foreground'
+                )}
+              >
+                <Link href={link.href}>{link.label}</Link>
+              </Button>
+            ))}
+          </div>
+           <Button asChild>
+              <Link href="/still-angry">
+                Next <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
             </Button>
-          ))}
         </nav>
-        <div className="md:hidden">
-          {/* You can add a mobile menu trigger here if needed */}
-        </div>
       </div>
     </header>
   );
