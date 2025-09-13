@@ -20,7 +20,6 @@ type RecordingState = 'idle' | 'recording' | 'recorded' | 'denied';
 const MAX_FILE_SIZE_MB = 10;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 const SUPPORTED_IMAGE_FORMATS = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
-const SUPPORTED_AUDIO_FORMATS = ['audio/wav', 'audio/x-aiff', 'audio/x-pcm', 'audio/mpeg', 'audio/webm'];
 const STORAGE_KEY = 'anger-away-data';
 const EXPIRATION_MINUTES = 30;
 
@@ -160,10 +159,9 @@ export default function HomePageClient() {
   const startRecording = async () => {
     setAudioUrl(null);
     saveDataToLocalStorage({ audioUrl: null });
+    audioChunksRef.current = [];
     
     try {
-      audioChunksRef.current = [];
-      
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
 
@@ -306,14 +304,14 @@ export default function HomePageClient() {
             <p className="text-lg mt-4 mb-4">Your recording is ready.</p>
              {pageState === 'idle' && !isFlushing && (
                 <div className="border-t pt-4 flex flex-col gap-4 w-full">
-                    <audio key={audioKey} controls src={audioUrl} className="w-full" />
+                    {audioUrl && <audio key={audioKey} controls src={audioUrl} className="w-full" />}
                     <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
                         <Trash2 className="mr-2 h-4 w-4" />
                         Discard
                     </Button>
                 </div>
             )}
-            {isFlushing && <audio src={audioUrl} className="w-full" controls disabled />}
+            {isFlushing && audioUrl && <audio src={audioUrl} className="w-full" controls disabled />}
           </div>
         );
       }
