@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Image as ImageIcon, Mic, FileText, Square, Trash2, X, Play, Pause, Check } from 'lucide-react';
+import { Image as ImageIcon, Mic, FileText, Square, Trash2, X, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import ImageCropDialog from './image-crop-dialog';
@@ -39,12 +39,11 @@ export default function HomePageClient() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [pageState, setPageState] = useState<PageState>('idle');
   const [rawImageForCrop, setRawImageForCrop] = useState<string | null>(null);
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [audioKey, setAudioKey] = useState<number>(Date.now());
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const flushAudioRef = useRef<HTMLAudioElement | null>(null);
   
   const { toast } = useToast();
@@ -96,32 +95,6 @@ export default function HomePageClient() {
       saveDataToLocalStorage({ angerText, mediaPreview, audioUrl });
     }
   }, [angerText, mediaPreview, audioUrl, isContentPresent]);
-
-  useEffect(() => {
-    // This effect manages the lifecycle of the Audio object.
-    if (audioUrl && typeof window !== 'undefined') {
-      const audio = new Audio(audioUrl);
-      audioRef.current = audio;
-  
-      const handleEnded = () => setIsAudioPlaying(false);
-      audio.addEventListener('ended', handleEnded);
-  
-      // Cleanup function
-      return () => {
-        audio.pause();
-        audio.removeEventListener('ended', handleEnded);
-        audioRef.current = null;
-      };
-    } else {
-      // If audioUrl is null, ensure any existing audio is stopped and reset.
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-      setIsAudioPlaying(false);
-    }
-  }, [audioUrl]);
-
 
   useEffect(() => {
     // Pre-load the flush audio
@@ -185,7 +158,6 @@ export default function HomePageClient() {
   }
 
   const startRecording = async () => {
-    // Crucially, set the audioUrl to null to trigger the cleanup effect for the old audio.
     setAudioUrl(null);
     saveDataToLocalStorage({ audioUrl: null });
     
@@ -205,7 +177,8 @@ export default function HomePageClient() {
         const reader = new FileReader();
         reader.onloadend = () => {
             const base64Audio = reader.result as string;
-            setAudioUrl(base64Audio); // This will trigger the useEffect to create a new Audio object
+            setAudioUrl(base64Audio);
+            setAudioKey(Date.now());
             saveDataToLocalStorage({ audioUrl: base64Audio });
         };
         reader.readAsDataURL(audioBlob);
@@ -242,22 +215,9 @@ export default function HomePageClient() {
       stopRecording();
     }
   };
-  
-  const handleListen = () => {
-    if (audioRef.current) {
-        if (isAudioPlaying) {
-            audioRef.current.pause();
-            // No need to reset currentTime, allows resuming
-            setIsAudioPlaying(false);
-        } else {
-            audioRef.current.play().catch(e => console.error("Error playing audio:", e));
-            setIsAudioPlaying(true);
-        }
-    }
-  };
 
   const handleDiscardAudio = () => {
-    setAudioUrl(null); // This will trigger the cleanup effect
+    setAudioUrl(null);
     saveDataToLocalStorage({ audioUrl: null });
     setRecordingState('idle');
     audioChunksRef.current = [];
@@ -279,17 +239,11 @@ export default function HomePageClient() {
         flushAudioRef.current.play().catch(e => console.error("Error playing flush sound:", e));
     }
 
-    // Stop listening audio if playing
-    if (audioRef.current && isAudioPlaying) {
-        audioRef.current.pause();
-        setIsAudioPlaying(false);
-    }
-
     setTimeout(() => {
       setPageState('flushed');
       setAngerText('');
       setMediaPreview(null);
-      setAudioUrl(null); // This triggers the final audio cleanup
+      setAudioUrl(null);
       setRecordingState('idle');
 
       try {
@@ -342,7 +296,7 @@ export default function HomePageClient() {
     
     if (audioUrl) {
         return (
-          <div className="flex flex-col items-center justify-center flex-1 h-full text-center p-4">
+          <div className="flex flex-col items-center justify-center flex-1 h-full text-center p-4 w-full">
             <div className="relative">
                 <div className="absolute inset-0 bg-primary/10 rounded-full animate-pulse"></div>
                 <div className="relative bg-primary/20 rounded-full p-6">
@@ -351,17 +305,15 @@ export default function HomePageClient() {
             </div>
             <p className="text-lg mt-4 mb-4">Your recording is ready.</p>
              {pageState === 'idle' && !isFlushing && (
-                <div className="border-t pt-4 flex gap-4 w-full">
+                <div className="border-t pt-4 flex flex-col gap-4 w-full">
+                    <audio key={audioKey} controls src={audioUrl} className="w-full" />
                     <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
                         <Trash2 className="mr-2 h-4 w-4" />
                         Discard
                     </Button>
-                    <Button onClick={handleListen} variant="outline" className="w-full justify-center">
-                        {isAudioPlaying ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
-                        {isAudioPlaying ? 'Stop' : 'Listen'}
-                    </Button>
                 </div>
             )}
+            {isFlushing && <audio src={audioUrl} className="w-full" controls disabled />}
           </div>
         );
       }
@@ -634,3 +586,5 @@ export default function HomePageClient() {
     </div>
   );
 }
+
+    
