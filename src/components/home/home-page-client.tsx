@@ -98,7 +98,7 @@ export default function HomePageClient() {
   }, [angerText, mediaPreview, audioUrl, isContentPresent]);
 
   useEffect(() => {
-    if (audioUrl) {
+    if (audioUrl && !audioRef.current) {
         const audioElement = new Audio(audioUrl);
         audioRef.current = audioElement;
 
@@ -107,8 +107,13 @@ export default function HomePageClient() {
 
         return () => {
             audioElement.removeEventListener('ended', handleEnded);
-            audioRef.current = null;
+            if (audioRef.current) {
+              audioRef.current.pause();
+              audioRef.current = null;
+            }
         }
+    } else if (audioUrl && audioRef.current && audioRef.current.src !== audioUrl) {
+        audioRef.current.src = audioUrl;
     }
   }, [audioUrl]);
 
@@ -248,11 +253,15 @@ export default function HomePageClient() {
   };
 
   const handleDiscardAudio = () => {
+    if (audioRef.current && isAudioPlaying) {
+        audioRef.current.pause();
+        setIsAudioPlaying(false);
+    }
     setAudioUrl(null);
-    setIsAudioPlaying(false);
     saveDataToLocalStorage({ audioUrl: null });
     setRecordingState('idle');
     audioChunksRef.current = [];
+    if(audioRef.current) audioRef.current = null;
   }
 
   const handleDiscardImage = () => {
@@ -277,6 +286,9 @@ export default function HomePageClient() {
       setMediaPreview(null);
       setAudioUrl(null);
       setRecordingState('idle');
+      if (audioRef.current) {
+        audioRef.current = null;
+      }
       try {
         localStorage.removeItem(STORAGE_KEY);
       } catch (error) {
@@ -335,7 +347,7 @@ export default function HomePageClient() {
                 </div>
             </div>
             <p className="text-lg mt-4 mb-4">Your recording is ready.</p>
-             {pageState === 'idle' && (
+             {pageState === 'idle' && !isFlushing && (
                 <div className="border-t pt-4 flex gap-4 w-full">
                     <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
                         <Trash2 className="mr-2 h-4 w-4" />
