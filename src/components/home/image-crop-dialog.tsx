@@ -107,5 +107,3 @@ export default function ImageCropDialog({ isOpen, onClose, imageSrc, onSave }: I
     </Dialog>
   );
 }
-
-    

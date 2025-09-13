@@ -128,7 +128,9 @@ export default function HomePageClient() {
       const croppedImageBlob = await getCroppedImg(rawImageForCrop, croppedAreaPixels);
       const reader = new FileReader();
       reader.onloadend = () => {
-          setMediaPreview(reader.result as string);
+        setMediaPreview(reader.result as string);
+        setIsCropDialogOpen(false);
+        setRawImageForCrop(null);
       };
       reader.readAsDataURL(croppedImageBlob);
     } catch (e) {
@@ -138,9 +140,8 @@ export default function HomePageClient() {
         title: 'Error cropping image',
         description: 'Something went wrong. Please try again.',
       });
-    } finally {
-        setIsCropDialogOpen(false);
-        setRawImageForCrop(null);
+      setIsCropDialogOpen(false);
+      setRawImageForCrop(null);
     }
   };
 
@@ -246,6 +247,9 @@ export default function HomePageClient() {
       setPageState('flushed');
       setAngerText('');
       setMediaPreview(null);
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl);
+      }
       setAudioUrl(null);
     }, 2000);
   };
@@ -269,19 +273,9 @@ export default function HomePageClient() {
   };
   
   const renderMediaContent = () => {
-    if (!mediaPreview && !audioUrl && recordingState !== 'recording') {
-      return (
-        <div className="text-center text-muted-foreground">
-          <ImageIcon className="mx-auto h-12 w-12" />
-          <p className="mt-2">Upload a photo to express your feelings.</p>
-        </div>
-      );
-    }
-
-    return (
-      <div className="w-full h-full flex flex-col gap-4">
-        {mediaPreview && (
-          <div className="w-full flex-1 h-1/2 relative group">
+    if (mediaPreview) {
+        return (
+          <div className="w-full h-full relative group">
             <Image src={mediaPreview} alt="Anger media preview" fill className="object-contain rounded-md" />
             <div className="absolute top-2 right-2 z-10">
                 <Button size="icon" variant="destructive" onClick={handleDiscardImage} className="rounded-full h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -290,22 +284,34 @@ export default function HomePageClient() {
                 </Button>
             </div>
           </div>
-        )}
+        );
+      }
 
-        {recordingState === 'recording' ? (
-          <div className="flex flex-col items-center justify-center flex-1 h-1/2 text-center">
+    if (recordingState === 'recording') {
+        return (
+          <div className="flex flex-col items-center justify-center flex-1 h-full text-center">
             <Mic className="h-16 w-16 text-red-500 animate-pulse" />
             <p className="mt-4 text-lg">Recording in progress...</p>
           </div>
-        ) : audioUrl ? (
-          <div className="flex flex-col items-center justify-center flex-1 h-1/2 text-center p-4">
+        );
+    }
+    
+    if (audioUrl) {
+        return (
+          <div className="flex flex-col items-center justify-center flex-1 h-full text-center p-4">
             <Music className="h-16 w-16 text-primary" />
             <p className="text-lg mt-4 mb-4">Listen to your recording:</p>
             <audio ref={audioRef} src={audioUrl} controls className="w-full" />
           </div>
-        ) : null}
-      </div>
-    );
+        );
+      }
+
+    return (
+        <div className="text-center text-muted-foreground">
+          <ImageIcon className="mx-auto h-12 w-12" />
+          <p className="mt-2">Upload a photo to express your feelings.</p>
+        </div>
+      );
   };
 
   const renderIdleState = () => (
@@ -495,5 +501,3 @@ export default function HomePageClient() {
     </div>
   );
 }
-
-    
