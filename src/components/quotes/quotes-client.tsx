@@ -89,7 +89,7 @@ export default function QuotesClient({ initialQuotes }: QuotesClientProps) {
           onClick={handleGetNewQuote}
           disabled={isLoading}
           size="lg"
-          className="bg-accent hover:bg-accent/90 text-primary-foreground"
+          className="bg-accent hover:bg-accent/90 text-primary-foreground hidden"
         >
           {isLoading ? (
             <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
