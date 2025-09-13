@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Image as ImageIcon, Mic, FileText, Square, Trash2, X, Check } from 'lucide-react';
+import { Image as ImageIcon, Mic, FileText, Square, Trash2, X, Check, Play, Pause } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import ImageCropDialog from './image-crop-dialog';
@@ -96,7 +96,6 @@ export default function HomePageClient() {
   }, [angerText, mediaPreview, audioUrl, isContentPresent]);
 
   useEffect(() => {
-    // Pre-load the flush audio
     const audio = new Audio('https://firebasestorage.googleapis.com/v0/b/prototyper-de2a8.appspot.com/o/public%2Ftoilet-flush-sound.mp3?alt=media&token=86a761ad-c841-499c-88e2-8874135d518d');
     audio.preload = 'auto';
     flushAudioRef.current = audio;
@@ -229,13 +228,12 @@ export default function HomePageClient() {
     }
   }
 
-
-  const handleFlush = async () => {
-    setPageState('flushing');
-
+  const handleFlush = () => {
     if (flushAudioRef.current) {
         flushAudioRef.current.play().catch(e => console.error("Error playing flush sound:", e));
     }
+
+    setPageState('flushing');
 
     setTimeout(() => {
       setPageState('flushed');
@@ -249,7 +247,7 @@ export default function HomePageClient() {
       } catch (error) {
         console.error("Error removing from local storage:", error);
       }
-    }, 5000); // Wait for flush animation and sound to finish
+    }, 5000);
   };
 
   const handleReset = () => {
@@ -293,28 +291,28 @@ export default function HomePageClient() {
     }
     
     if (audioUrl) {
-        return (
-          <div className="flex flex-col items-center justify-center flex-1 h-full text-center p-4 w-full">
-            <div className="relative">
-                <div className="absolute inset-0 bg-primary/10 rounded-full animate-pulse"></div>
-                <div className="relative bg-primary/20 rounded-full p-6">
-                    <Mic className="h-16 w-16 text-primary" />
-                </div>
-            </div>
-            <p className="text-lg mt-4 mb-4">Your recording is ready.</p>
-             {pageState === 'idle' && !isFlushing && (
-                <div className="border-t pt-4 flex flex-col gap-4 w-full">
-                    {audioUrl && <audio key={audioKey} controls src={audioUrl} className="w-full" />}
-                    <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Discard
-                    </Button>
-                </div>
-            )}
-            {isFlushing && audioUrl && <audio src={audioUrl} className="w-full" controls disabled />}
+      return (
+        <div className="flex flex-col items-center justify-center flex-1 h-full text-center p-4 w-full">
+          <div className="relative">
+              <div className="absolute inset-0 bg-primary/10 rounded-full animate-pulse"></div>
+              <div className="relative bg-primary/20 rounded-full p-6">
+                  <Mic className="h-16 w-16 text-primary" />
+              </div>
           </div>
-        );
-      }
+          <p className="text-lg mt-4 mb-4">Your recording is ready.</p>
+           {pageState === 'idle' && !isFlushing && (
+              <div className="border-t pt-4 flex flex-col gap-4 w-full">
+                  {audioUrl && <audio key={audioKey} controls src={audioUrl} className="w-full" />}
+                  <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Discard
+                  </Button>
+              </div>
+          )}
+          {isFlushing && audioUrl && <audio key={audioKey} src={audioUrl} className="w-full" controls disabled />}
+        </div>
+      );
+    }
 
     return (
         <div className="text-center text-muted-foreground">
