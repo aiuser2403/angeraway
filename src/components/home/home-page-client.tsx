@@ -6,12 +6,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Image as ImageIcon, Mic, FileText, Smile, Square, Trash2, X, Music, RefreshCw, Play, Pause } from 'lucide-react';
+import { Image as ImageIcon, Mic, FileText, Square, Trash2, X, Music, RefreshCw, Play, Pause } from 'lucide-react';
 import FlushPotIcon from '@/components/icons/flush-pot-icon';
 import { useToast } from '@/hooks/use-toast';
 import * as Tone from 'tone';
 import Image from 'next/image';
 import ImageCropDialog from './image-crop-dialog';
+import PleasantSmileyIcon from '@/components/icons/pleasant-smiley-icon';
 
 type PageState = 'idle' | 'flushing' | 'flushed';
 type RecordingState = 'idle' | 'recording' | 'recorded' | 'denied';
@@ -542,7 +543,7 @@ export default function HomePageClient() {
       className="text-center"
     >
       <div className="flex justify-center items-center">
-        <Smile className="w-48 h-48 text-accent" />
+        <PleasantSmileyIcon className="w-48 h-48 text-accent" />
       </div>
       <p className="text-3xl font-headline mt-8">Ahhh, much better.</p>
       <Button onClick={handleReset} className="mt-8" variant="outline">
