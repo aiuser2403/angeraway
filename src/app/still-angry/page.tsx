@@ -20,7 +20,12 @@ const avoidances = [
   'Don’t keep your feelings bottled up inside.',
   'Don’t make any big decisions while you are emotional.',
   'Avoid turning to unhealthy coping mechanisms.',
-  'Don’t dwell on the anger; seek a constructive outlet.'
+  'Don’t dwell on the anger; seek a constructive outlet.',
+  'Don’t post about your anger on social media.',
+  'Don’t send angry texts or emails.',
+  'Don’t use alcohol or junk food to cope.',
+  'Don’t stay in arguments; take a timeout instead.',
+  'Don’t let anger make you forget to care for yourself, like resting or eating well.',
 ];
 
 export default function StillAngryPage() {
