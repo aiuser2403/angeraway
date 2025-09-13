@@ -45,9 +45,6 @@ const PleasantSmileyIcon = React.forwardRef<
       {/* Glossy highlight */}
       <ellipse cx="50" cy="45" rx="35" ry="25" fill="url(#highlightGradient)" />
 
-      {/* Small sparkle */}
-      <path d="M 20 70 l 5 -2 l 2 5 l -5 2 Z" fill="white" opacity="0.8" transform="rotate(-15 22.5 72.5)"/>
-      <path d="M 20 70 l 5 2 l 2 -5 l -5 -2 Z" fill="white" opacity="0.8" transform="rotate(-15 22.5 72.5)"/>
     </svg>
   );
 });
