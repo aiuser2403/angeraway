@@ -99,7 +99,7 @@ export default function HomePageClient() {
         <p className="mt-2 text-lg text-muted-foreground">Write or record why you're angry.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-[90rem] mx-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl mx-auto">
         <Card className="shadow-lg transform hover:scale-105 transition-transform duration-300">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 font-headline">
@@ -110,7 +110,7 @@ export default function HomePageClient() {
           <CardContent>
             <Textarea
               placeholder="Describe why you’re angry…"
-              className="h-[30rem] resize-none"
+              className="h-[25rem] resize-none"
               value={angerText}
               onChange={(e) => setAngerText(e.target.value)}
               aria-label="Write your anger"
@@ -126,7 +126,7 @@ export default function HomePageClient() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col space-y-4 h-full justify-between min-h-[30rem]">
+            <div className="flex flex-col space-y-4 h-full justify-between min-h-[25rem]">
               <div>
                 <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center">
                   <ImageIcon className="mr-2 h-4 w-4" />
