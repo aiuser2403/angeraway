@@ -12,6 +12,11 @@ export function getRadianAngle(degreeValue: number) {
   return (degreeValue * Math.PI) / 180;
 }
 
+function getMimeType(imageSrc: string): string {
+    const match = imageSrc.match(/^data:(image\/[a-z]+);base64,/);
+    return match ? match[1] : 'image/jpeg';
+}
+
 export async function getCroppedImg(
   imageSrc: string,
   pixelCrop: { x: number; y: number; width: number; height: number },
@@ -53,13 +58,15 @@ export async function getCroppedImg(
   canvas.height = pixelCrop.height;
 
   ctx.putImageData(data, 0, 0);
+  
+  const mimeType = getMimeType(imageSrc);
 
   return new Promise((resolve) => {
     canvas.toBlob((blob) => {
       if (blob) {
         resolve(blob);
       }
-    }, 'image/jpeg');
+    }, mimeType);
   });
 }
 
