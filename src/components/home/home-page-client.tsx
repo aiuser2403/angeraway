@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Image as ImageIcon, Mic, FileText, Square, Trash2, X, Check, Play, Pause } from 'lucide-react';
+import { Image as ImageIcon, Mic, FileText, Square, Trash2, X, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import ImageCropDialog from './image-crop-dialog';
@@ -175,7 +175,7 @@ export default function HomePageClient() {
         reader.onloadend = () => {
             const base64Audio = reader.result as string;
             setAudioUrl(base64Audio);
-            setAudioKey(Date.now());
+            setAudioKey(Date.now()); // Force re-render of audio element
             saveDataToLocalStorage({ audioUrl: base64Audio });
         };
         reader.readAsDataURL(audioBlob);
@@ -232,7 +232,7 @@ export default function HomePageClient() {
     if (flushAudioRef.current) {
         flushAudioRef.current.play().catch(e => console.error("Error playing flush sound:", e));
     }
-
+    
     setPageState('flushing');
 
     setTimeout(() => {
@@ -302,14 +302,14 @@ export default function HomePageClient() {
           <p className="text-lg mt-4 mb-4">Your recording is ready.</p>
            {pageState === 'idle' && !isFlushing && (
               <div className="border-t pt-4 flex flex-col gap-4 w-full">
-                  {audioUrl && <audio key={audioKey} controls src={audioUrl} className="w-full" />}
+                  <audio key={audioKey} controls src={audioUrl} className="w-full" />
                   <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
                       <Trash2 className="mr-2 h-4 w-4" />
                       Discard
                   </Button>
               </div>
           )}
-          {isFlushing && audioUrl && <audio key={audioKey} src={audioUrl} className="w-full" controls disabled />}
+          {isFlushing && <audio key={audioKey} src={audioUrl} className="w-full" controls disabled />}
         </div>
       );
     }
