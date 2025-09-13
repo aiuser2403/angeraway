@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Image as ImageIcon, Mic, FileText, Smile, Square, Trash2, X } from 'lucide-react';
+import { Image as ImageIcon, Mic, FileText, Smile, Square, Trash2, X, Music, RefreshCw } from 'lucide-react';
 import FlushPotIcon from '@/components/icons/flush-pot-icon';
 import { useToast } from '@/hooks/use-toast';
 import * as Tone from 'tone';
@@ -136,7 +136,7 @@ export default function HomePageClient() {
       audioChunksRef.current = [];
       
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream);
+      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
       audioChunksRef.current = [];
 
       mediaRecorderRef.current.ondataavailable = (event) => {
@@ -235,7 +235,7 @@ export default function HomePageClient() {
     if (mediaPreview) {
       return (
         <div className="w-full h-full relative group">
-          <Image src={mediaPreview} alt="Anger media preview" layout="fill" objectFit="contain" className="rounded-md" />
+          <Image src={mediaPreview} alt="Anger media preview" fill className="object-contain rounded-md" />
           <div className="absolute top-2 right-2 z-10">
               <Button size="icon" variant="destructive" onClick={handleDiscardImage} className="rounded-full h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
                   <X className="h-4 w-4" />
@@ -258,7 +258,8 @@ export default function HomePageClient() {
     if (audioUrl) {
         return (
           <div className="flex flex-col items-center justify-center h-full text-center p-4">
-            <p className="text-lg mb-4">Listen to your recording:</p>
+            <Music className="h-16 w-16 text-primary" />
+            <p className="text-lg mt-4 mb-4">Listen to your recording:</p>
             <audio ref={audioRef} src={audioUrl} controls className="w-full" />
           </div>
         );
@@ -267,7 +268,7 @@ export default function HomePageClient() {
     return (
         <div className="text-center text-muted-foreground">
           <ImageIcon className="mx-auto h-12 w-12" />
-          <p className="mt-2">Upload a photo to express your anger.</p>
+          <p className="mt-2">Upload a photo to express your feelings.</p>
         </div>
     );
   };
@@ -279,7 +280,7 @@ export default function HomePageClient() {
         <p className="mt-2 text-lg text-muted-foreground">Write or record why you're angry.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-5xl mx-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl mx-auto">
         <Card className="shadow-lg transform hover:scale-[1.02] transition-transform duration-300">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 font-headline">
@@ -290,7 +291,7 @@ export default function HomePageClient() {
           <CardContent>
             <Textarea
               placeholder="Describe why you’re angry…"
-              className="min-h-[450px] resize-none"
+              className="min-h-[500px] resize-none"
               value={angerText}
               onChange={(e) => setAngerText(e.target.value)}
               aria-label="Write your anger"
@@ -306,7 +307,7 @@ export default function HomePageClient() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-             <div className="flex flex-col space-y-4 h-full justify-between min-h-[450px]">
+             <div className="flex flex-col space-y-4 h-full justify-between min-h-[500px]">
                 <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-full">
                   {renderMediaContent()}
                 </div>
@@ -320,7 +321,7 @@ export default function HomePageClient() {
                           Discard Audio
                         </Button>
                         <Button onClick={handleRerecord} className="w-full justify-center">
-                          <Mic className="mr-2 h-4 w-4" />
+                          <RefreshCw className="mr-2 h-4 w-4" />
                           Re-record
                         </Button>
                       </div>
@@ -328,9 +329,9 @@ export default function HomePageClient() {
 
                   {recordingState !== 'recording' && (
                      <div className="flex gap-4">
-                        <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center" disabled={!!mediaPreview}>
+                        <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center" disabled={!!mediaPreview && !audioUrl}>
                           <ImageIcon className="mr-2 h-4 w-4" />
-                          {mediaPreview ? 'Image Uploaded' : 'Upload Image'}
+                          {mediaPreview ? 'Change Image' : 'Upload Image'}
                         </Button>
                         <input 
                           type="file" 
@@ -339,7 +340,7 @@ export default function HomePageClient() {
                           onChange={handleFileChange} 
                           className="hidden" 
                         />
-                         <Button variant="outline" onClick={handleRecordControl} className="w-full justify-center">
+                         <Button variant="outline" onClick={handleRecordControl} className="w-full justify-center" disabled={!mediaPreview && !!audioUrl}>
                           <Mic className="mr-2 h-4 w-4" />
                           {audioUrl ? 'Re-record' : 'Record Audio'}
                         </Button>
