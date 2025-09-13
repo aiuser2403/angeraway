@@ -99,22 +99,15 @@ export default function HomePageClient() {
 
   useEffect(() => {
     if (audioUrl && typeof window !== 'undefined') {
-        if (!audioRef.current) {
-            audioRef.current = new Audio(audioUrl);
-        } else {
-            audioRef.current.src = audioUrl;
-        }
-
+        audioRef.current = new Audio(audioUrl);
+        
         const handleEnded = () => setIsAudioPlaying(false);
         const currentAudioRef = audioRef.current;
         currentAudioRef.addEventListener('ended', handleEnded);
 
         return () => {
             currentAudioRef.removeEventListener('ended', handleEnded);
-            if (isAudioPlaying) {
-              currentAudioRef.pause();
-              setIsAudioPlaying(false);
-            }
+            currentAudioRef.pause();
         };
     } else {
       if (audioRef.current) {
@@ -645,6 +638,8 @@ export default function HomePageClient() {
     </div>
   );
 }
+
+    
 
     
 
