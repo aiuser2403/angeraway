@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Image as ImageIcon, Mic, FileText, Smile, Square, Trash2, X, Music, RefreshCw } from 'lucide-react';
+import { Image as ImageIcon, Mic, FileText, Smile, Square, Trash2, X, Music, RefreshCw, Mail } from 'lucide-react';
 import FlushPotIcon from '@/components/icons/flush-pot-icon';
 import { useToast } from '@/hooks/use-toast';
 import * as Tone from 'tone';
@@ -31,16 +31,43 @@ export default function HomePageClient() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [pageState, setPageState] = useState<PageState>('idle');
   const [rawImageForCrop, setRawImageForCrop] = useState<string | null>(null);
+  const [showDoneSharing, setShowDoneSharing] = useState(false);
+  const [doneSharingClicked, setDoneSharingClicked] = useState(false);
 
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   const { toast } = useToast();
 
   const [flushSynth, setFlushSynth] = useState<Tone.NoiseSynth | null>(null);
+
+  const isContentPresent = useMemo(() => {
+    return angerText.trim().length > 0 || mediaPreview !== null || audioUrl !== null;
+  }, [angerText, mediaPreview, audioUrl]);
+
+  useEffect(() => {
+    if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+    }
+    setShowDoneSharing(false);
+    setDoneSharingClicked(false);
+
+    if (isContentPresent) {
+        inactivityTimerRef.current = setTimeout(() => {
+            setShowDoneSharing(true);
+        }, 30000); // 30 seconds
+    }
+
+    return () => {
+        if (inactivityTimerRef.current) {
+            clearTimeout(inactivityTimerRef.current);
+        }
+    };
+  }, [angerText, mediaPreview, audioUrl, isContentPresent]);
 
   useEffect(() => {
     const synth = new Tone.NoiseSynth({
@@ -63,10 +90,6 @@ export default function HomePageClient() {
       }
     };
   }, [audioUrl]);
-
-  const showFlushButton = useMemo(() => {
-    return angerText.length > 0 || mediaPreview !== null || audioUrl !== null;
-  }, [angerText, mediaPreview, audioUrl]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -102,8 +125,8 @@ export default function HomePageClient() {
     if (!rawImageForCrop) return;
     try {
       const croppedImageBlob = await getCroppedImg(rawImageForCrop, croppedAreaPixels);
-      // No longer saving file to state, just the preview URL.
-      setMediaPreview(URL.createObjectURL(croppedImageBlob));
+      const previewUrl = URL.createObjectURL(croppedImageBlob);
+      setMediaPreview(previewUrl);
     } catch (e) {
       console.error(e);
       toast({
@@ -226,6 +249,13 @@ export default function HomePageClient() {
     }, 2000);
   };
   
+  const handleEmail = () => {
+    toast({
+        title: "Feature coming soon!",
+        description: "The ability to email your thoughts is not yet implemented.",
+    });
+  };
+
   const handleReset = () => {
     setPageState('idle');
   }
@@ -359,17 +389,36 @@ export default function HomePageClient() {
       </div>
 
       <AnimatePresence>
-        {showFlushButton && (
+        {showDoneSharing && !doneSharingClicked && (
           <motion.div
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 50 }}
-            className="fixed bottom-10"
+            className="fixed bottom-10 right-10"
           >
+            <Button size="lg" className="rounded-full shadow-2xl" onClick={() => setDoneSharingClicked(true)}>
+              Done Sharing
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {doneSharingClicked && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 50 }}
+            className="fixed bottom-10 right-10 flex gap-4"
+          >
+            <Button size="lg" variant="outline" className="rounded-full shadow-2xl" onClick={handleEmail}>
+              <Mail className="mr-2" />
+              Email it to yourself
+            </Button>
             <Button size="lg" className="rounded-full shadow-2xl" onClick={handleFlush}>
               <FlushPotIcon className="mr-2" />
-              Flush it out
+              Flush It Out
             </Button>
           </motion.div>
         )}
@@ -428,4 +477,5 @@ export default function HomePageClient() {
   );
 }
 
+    
     
