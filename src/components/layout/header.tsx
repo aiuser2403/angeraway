@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ArrowLeft } from 'lucide-react';
 
 const navLinks = [
   { href: '/still-angry', label: 'Still Angry?' },
@@ -15,14 +15,47 @@ const navLinks = [
 export default function Header() {
   const pathname = usePathname();
 
+  const getNextLink = () => {
+    if (pathname === '/') {
+      return '/still-angry';
+    }
+    if (pathname === '/still-angry') {
+      return '/motivational-quotes';
+    }
+    return null;
+  };
+
+  const getBackLink = () => {
+    if (pathname === '/motivational-quotes') {
+      return '/still-angry';
+    }
+    if (pathname === '/still-angry') {
+      return '/';
+    }
+    return null;
+  }
+
+  const nextLink = getNextLink();
+  const backLink = getBackLink();
+
   return (
     <header className="py-4 px-4 sm:px-6 md:px-8 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex justify-between items-center">
-        <Link href="/">
-          <h1 className="text-2xl md:text-3xl font-headline font-bold text-primary">
-            Anger Away
-          </h1>
-        </Link>
+        <div className="flex items-center gap-4">
+            {backLink && (
+                 <Button asChild variant="outline" size="icon">
+                    <Link href={backLink}>
+                        <ArrowLeft className="h-4 w-4" />
+                        <span className="sr-only">Back</span>
+                    </Link>
+                </Button>
+            )}
+            <Link href="/">
+            <h1 className="text-2xl md:text-3xl font-headline font-bold text-primary">
+                Anger Away
+            </h1>
+            </Link>
+        </div>
         <nav className="flex items-center space-x-2">
           <div className="hidden md:flex items-center space-x-2">
             {navLinks.map((link) => (
@@ -39,11 +72,13 @@ export default function Header() {
               </Button>
             ))}
           </div>
-           <Button asChild>
-              <Link href="/still-angry">
-                Next <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
+           {nextLink && (
+            <Button asChild>
+                <Link href={nextLink}>
+                    Next <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+                </Button>
+           )}
         </nav>
       </div>
     </header>
