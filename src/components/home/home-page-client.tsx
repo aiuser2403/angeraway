@@ -6,26 +6,34 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Image as ImageIcon, Mic, FileText, Smile } from 'lucide-react';
+import { Image as ImageIcon, Mic, FileText, Smile, Play, Square, Trash2 } from 'lucide-react';
 import FlushPotIcon from '@/components/icons/flush-pot-icon';
 import { useToast } from '@/hooks/use-toast';
 import * as Tone from 'tone';
 import Image from 'next/image';
 
 type PageState = 'idle' | 'flushing' | 'flushed';
+type RecordingState = 'idle' | 'recording' | 'recorded' | 'denied';
 
 const MAX_FILE_SIZE_MB = 10;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
-const SUPPORTED_FORMATS = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
+const SUPPORTED_IMAGE_FORMATS = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
+const SUPPORTED_AUDIO_FORMATS = ['audio/wav', 'audio/x-aiff', 'audio/x-pcm', 'audio/mpeg', 'audio/webm'];
+
 
 export default function HomePageClient() {
   const [angerText, setAngerText] = useState('');
   const [angerMedia, setAngerMedia] = useState<File | null>(null);
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
+  const [recordingState, setRecordingState] = useState<RecordingState>('idle');
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [pageState, setPageState] = useState<PageState>('idle');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  
   const { toast } = useToast();
 
   const [flushSynth, setFlushSynth] = useState<Tone.NoiseSynth | null>(null);
@@ -46,13 +54,15 @@ export default function HomePageClient() {
 
     return () => {
       synth.dispose();
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl);
+      }
     };
   }, []);
 
-
   const showFlushButton = useMemo(() => {
-    return angerText.length > 0 || angerMedia !== null || isRecording;
-  }, [angerText, angerMedia, isRecording]);
+    return angerText.length > 0 || angerMedia !== null || audioUrl !== null;
+  }, [angerText, angerMedia, audioUrl]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -66,7 +76,7 @@ export default function HomePageClient() {
         return;
       }
 
-      if (!SUPPORTED_FORMATS.includes(file.type)) {
+      if (!SUPPORTED_IMAGE_FORMATS.includes(file.type)) {
         toast({
           variant: 'destructive',
           title: 'Invalid file type',
@@ -84,13 +94,64 @@ export default function HomePageClient() {
     }
   };
 
-  const handleRecord = () => {
-    setIsRecording(!isRecording);
-    toast({
-      title: isRecording ? "Recording stopped" : "Recording started",
-      description: "Audio recording is a demo feature.",
-    });
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const url = URL.createObjectURL(audioBlob);
+        setAudioUrl(url);
+        setRecordingState('recorded');
+        // Stop all tracks to release microphone
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorderRef.current.start();
+      setRecordingState('recording');
+      toast({ title: "Recording started" });
+    } catch (error) {
+      console.error("Error accessing microphone:", error);
+      setRecordingState('denied');
+      toast({
+        variant: 'destructive',
+        title: 'Microphone access denied',
+        description: 'Please enable microphone permissions in your browser settings.',
+      });
+    }
   };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && recordingState === 'recording') {
+      mediaRecorderRef.current.stop();
+      toast({ title: "Recording stopped" });
+    }
+  };
+
+  const handleRecordControl = () => {
+    if (recordingState === 'idle' || recordingState === 'denied' || recordingState === 'recorded') {
+      handleRerecord();
+      startRecording();
+    } else if (recordingState === 'recording') {
+      stopRecording();
+    }
+  };
+  
+  const handleRerecord = () => {
+    setAudioUrl(null);
+    if(audioUrl) {
+      URL.revokeObjectURL(audioUrl);
+    }
+    setRecordingState('idle');
+    audioChunksRef.current = [];
+  };
+
 
   const handleFlush = async () => {
     if (Tone.context.state !== 'running') {
@@ -107,13 +168,63 @@ export default function HomePageClient() {
       setAngerText('');
       setAngerMedia(null);
       setMediaPreview(null);
-      setIsRecording(false);
+      handleRerecord();
     }, 2000);
   };
   
   const handleReset = () => {
     setPageState('idle');
   }
+  
+  const renderRecordCardContent = () => {
+    switch (recordingState) {
+      case 'recording':
+        return (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <Mic className="h-16 w-16 text-red-500 animate-pulse" />
+            <p className="mt-4 text-lg">Recording in progress...</p>
+            <Button variant="destructive" onClick={handleRecordControl} className="w-full justify-center mt-8">
+              <Square className="mr-2 h-4 w-4" />
+              Stop Recording
+            </Button>
+          </div>
+        );
+      case 'recorded':
+        return (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <p className="text-lg mb-4">Listen to your recording:</p>
+            <audio ref={audioRef} src={audioUrl!} controls className="w-full" />
+            <div className="flex gap-4 mt-8 w-full">
+              <Button variant="outline" onClick={handleRerecord} className="w-full justify-center">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Discard
+              </Button>
+              <Button onClick={() => { setRecordingState('idle'); startRecording(); }} className="w-full justify-center">
+                <Mic className="mr-2 h-4 w-4" />
+                Re-record
+              </Button>
+            </div>
+          </div>
+        );
+      default: // idle, denied
+        return (
+          <div className="flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4">
+            {mediaPreview ? (
+              <div className="relative w-full h-full">
+                <Image src={mediaPreview} alt="Anger media preview" layout="fill" objectFit="contain" className="rounded-md" />
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground">
+                <ImageIcon className="mx-auto h-12 w-12" />
+                <p className="mt-2">Upload a photo to express your anger.</p>
+                <p className="text-xs mt-1">Supports JPEG, PNG, WEBP, GIF, SVG. Max 10MB.</p>
+              </div>
+            )}
+          </div>
+        );
+    }
+  };
+
 
   const renderIdleState = () => (
     <>
@@ -122,7 +233,7 @@ export default function HomePageClient() {
         <p className="mt-2 text-lg text-muted-foreground">Write or record why you're angry.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-[84rem] mx-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-[100rem] mx-auto">
         <Card className="shadow-lg transform hover:scale-105 transition-transform duration-300">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 font-headline">
@@ -133,7 +244,7 @@ export default function HomePageClient() {
           <CardContent>
             <Textarea
               placeholder="Describe why you’re angry…"
-              className="h-[30rem] resize-none"
+              className="h-[35rem] resize-none"
               value={angerText}
               onChange={(e) => setAngerText(e.target.value)}
               aria-label="Write your anger"
@@ -149,39 +260,43 @@ export default function HomePageClient() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col space-y-4 h-full justify-between min-h-[30rem]">
-              <div className="flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4">
-                {mediaPreview ? (
-                  <div className="relative w-full h-full">
-                    <Image src={mediaPreview} alt="Anger media preview" layout="fill" objectFit="contain" className="rounded-md" />
+             <div className="flex flex-col space-y-4 h-full justify-between min-h-[35rem]">
+              {recordingState === 'idle' || recordingState === 'denied' ? (
+                <>
+                  <div className="flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4">
+                    {mediaPreview ? (
+                       <div className="relative w-full h-full">
+                         <Image src={mediaPreview} alt="Anger media preview" fill objectFit="contain" className="rounded-md" />
+                       </div>
+                    ) : (
+                      <div className="text-center text-muted-foreground">
+                        <ImageIcon className="mx-auto h-12 w-12" />
+                        <p className="mt-2">Upload a photo to express your anger.</p>
+                        <p className="text-xs mt-1">Supports JPEG, PNG, WEBP, GIF, SVG. Max 10MB.</p>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="text-center text-muted-foreground">
-                    <ImageIcon className="mx-auto h-12 w-12" />
-                    <p className="mt-2">Upload a photo to express your anger.</p>
-                    <p className="text-xs mt-1">Supports JPEG, PNG, WEBP, GIF, SVG. Max 10MB.</p>
+                  <div className="flex-shrink-0 flex gap-4 mt-4">
+                    <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center">
+                      <ImageIcon className="mr-2 h-4 w-4" />
+                      {mediaPreview ? 'Change Image' : 'Upload Image'}
+                    </Button>
+                    <input 
+                      type="file" 
+                      accept={SUPPORTED_IMAGE_FORMATS.join(',')} 
+                      ref={fileInputRef} 
+                      onChange={handleFileChange} 
+                      className="hidden" 
+                    />
+                    <Button variant="outline" onClick={handleRecordControl} className="w-full justify-center">
+                      <Mic className="mr-2 h-4 w-4" />
+                      Record Audio
+                    </Button>
                   </div>
-                )}
-              </div>
-              
-              <div className="flex-shrink-0 flex gap-4 mt-4">
-                <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center">
-                  <ImageIcon className="mr-2 h-4 w-4" />
-                  {mediaPreview ? 'Change Image' : 'Upload Image'}
-                </Button>
-                <input 
-                  type="file" 
-                  accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml" 
-                  ref={fileInputRef} 
-                  onChange={handleFileChange} 
-                  className="hidden" 
-                />
-                
-                <Button variant={isRecording ? "destructive" : "outline"} onClick={handleRecord} className="w-full justify-center">
-                  <Mic className="mr-2 h-4 w-4" />
-                  {isRecording ? "Stop Recording" : "Record Audio"}
-                </Button>
-              </div>
+                </>
+              ) : (
+                renderRecordCardContent()
+              )}
             </div>
           </CardContent>
         </Card>
@@ -247,3 +362,5 @@ export default function HomePageClient() {
     </div>
   );
 }
+
+    
