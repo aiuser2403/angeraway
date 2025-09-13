@@ -16,10 +16,14 @@
     {
         "id": "toilet-background",
         "description": "A top-down view of a clean, white toilet bowl, ready to flush away anger.",
-        "imageUrl": "https://images.unsplash.com/photo-1582298539293-2f883d631a00?q=80&w=1920",
+        "imageUrl": "https://images.unsplash.com/photo-1582298539293-2f883d631a00?q=80&w=1920&fit=crop",
         "imageHint": "toilet top-down"
+    },
+    {
+        "id": "toilet-side",
+        "description": "Side view of a modern toilet.",
+        "imageUrl": "https://images.unsplash.com/photo-1603122694268-b387cf3b1a8d?q=80&w=1920",
+        "imageHint": "toilet side"
     }
   ]
 }
-
-    

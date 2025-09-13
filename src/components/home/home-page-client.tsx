@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,6 +12,7 @@ import Image from 'next/image';
 import ImageCropDialog from './image-crop-dialog';
 import PleasantSmileyIcon from '@/components/icons/pleasant-smiley-icon';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import ToiletIcon from '../icons/toilet-icon';
 
 type PageState = 'idle' | 'flushing' | 'flushed';
 type RecordingState = 'idle' | 'recording' | 'recorded' | 'denied';
@@ -38,8 +39,6 @@ export default function HomePageClient() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [pageState, setPageState] = useState<PageState>('idle');
   const [rawImageForCrop, setRawImageForCrop] = useState<string | null>(null);
-  const [showDoneSharing, setShowDoneSharing] = useState(false);
-  const [doneSharingClicked, setDoneSharingClicked] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -47,7 +46,6 @@ export default function HomePageClient() {
   const audioChunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const flushAudioRef = useRef<HTMLAudioElement | null>(null);
-  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   const { toast } = useToast();
 
@@ -114,26 +112,6 @@ export default function HomePageClient() {
     }
   }, [audioUrl]);
 
-
-  useEffect(() => {
-    if (inactivityTimerRef.current) {
-        clearTimeout(inactivityTimerRef.current);
-    }
-    setShowDoneSharing(false);
-    setDoneSharingClicked(false);
-
-    if (isContentPresent) {
-        inactivityTimerRef.current = setTimeout(() => {
-            setShowDoneSharing(true);
-        }, 30000); // 30 seconds
-    }
-
-    return () => {
-        if (inactivityTimerRef.current) {
-            clearTimeout(inactivityTimerRef.current);
-        }
-    };
-  }, [angerText, mediaPreview, audioUrl, isContentPresent]);
 
   useEffect(() => {
     // Pre-load the flush audio
@@ -309,8 +287,6 @@ export default function HomePageClient() {
 
   const handleReset = () => {
     setPageState('idle');
-    setShowDoneSharing(false);
-    setDoneSharingClicked(false);
   }
 
   const contentVariants = {
@@ -458,38 +434,18 @@ export default function HomePageClient() {
                 </CardContent>
             </Card>
         </div>
-
-        <AnimatePresence>
-            {showDoneSharing && !doneSharingClicked && (
-            <motion.div
-                initial={{ y: 100, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 100, opacity: 0 }}
-                transition={{ type: 'spring', stiffness: 50 }}
-                className="fixed bottom-10 right-10"
+        
+        <div className="mt-12 text-center">
+            <Button 
+                size="lg" 
+                className="rounded-full shadow-2xl bg-primary hover:bg-primary/90 text-primary-foreground h-16 px-10 text-xl" 
+                onClick={handleFlush}
+                disabled={!isContentPresent}
             >
-                <Button size="lg" className="rounded-full shadow-2xl" onClick={() => setDoneSharingClicked(true)}>
-                Done Sharing
-                </Button>
-            </motion.div>
-            )}
-        </AnimatePresence>
-        <AnimatePresence>
-            {doneSharingClicked && pageState === 'idle' && (
-            <motion.div
-                initial={{ y: 100, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 100, opacity: 0 }}
-                transition={{ type: 'spring', stiffness: 50 }}
-                className="fixed bottom-10 right-10 flex gap-4"
-            >
-                <Button size="lg" className="rounded-full shadow-2xl bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleFlush}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-6 w-6"><path d="M5 12h14v8a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-8z"/><path d="M20 6h-1a1 1 0 0 0-1 1v2H6V7a1 1 0 0 0-1-1H4a2 2 0 0 0-2 2v3h20V8a2 2 0 0 0-2-2z"/><path d="M20 7v0a2 2 0 0 1-2-2h-1"/></svg>
+                <ToiletIcon className="mr-3 h-8 w-8" />
                 Flush It Out
-                </Button>
-            </motion.div>
-            )}
-        </AnimatePresence>
+            </Button>
+        </div>
         
         {rawImageForCrop && (
             <ImageCropDialog 
@@ -590,7 +546,7 @@ export default function HomePageClient() {
   return (
     <div className="container mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-[calc(100vh-80px)]">
       <AnimatePresence mode="wait">
-        {pageState === 'idle' && <motion.div key="idle-container">{renderIdleState()}</motion.div>}
+        {pageState === 'idle' && <motion.div key="idle-container" className="w-full">{renderIdleState()}</motion.div>}
         {pageState === 'flushing' && <motion.div key="flushing-container">{renderFlushingState()}</motion.div>}
         {pageState === 'flushed' && <motion.div key="flushed-container">{renderFlushedState()}</motion.div>}
       </AnimatePresence>
@@ -600,5 +556,3 @@ export default function HomePageClient() {
     </div>
   );
 }
-
-    
