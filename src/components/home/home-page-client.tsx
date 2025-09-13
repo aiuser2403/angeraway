@@ -286,7 +286,7 @@ export default function HomePageClient() {
           <CardContent>
             <Textarea
               placeholder="Describe why you’re angry…"
-              className="h-[450px] resize-none"
+              className="min-h-[550px] resize-none"
               value={angerText}
               onChange={(e) => setAngerText(e.target.value)}
               aria-label="Write your anger"
@@ -302,18 +302,12 @@ export default function HomePageClient() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-             <div className="flex flex-col space-y-4 h-full justify-between min-h-[450px]">
-                <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-64">
+             <div className="flex flex-col space-y-4 h-full justify-between min-h-[550px]">
+                <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-full">
                   {renderMediaContent()}
                 </div>
                 
                 <div className="flex-shrink-0 flex flex-col gap-4 mt-4">
-                  {mediaPreview && (
-                     <Button variant="outline" onClick={handleDiscardImage} className="w-full justify-center">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Remove Image
-                      </Button>
-                  )}
                   
                   {audioUrl && !mediaPreview && recordingState !== 'recording' && (
                      <div className="border-t pt-4 flex gap-4 w-full">
@@ -330,7 +324,7 @@ export default function HomePageClient() {
 
                   {recordingState !== 'recording' && (
                      <div className="flex gap-4">
-                        <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center" disabled={!!audioUrl}>
+                        <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center">
                           <ImageIcon className="mr-2 h-4 w-4" />
                           {mediaPreview ? 'Change Image' : 'Upload Image'}
                         </Button>
@@ -341,7 +335,7 @@ export default function HomePageClient() {
                           onChange={handleFileChange} 
                           className="hidden" 
                         />
-                         <Button variant="outline" onClick={handleRecordControl} className="w-full justify-center" disabled={!!mediaPreview}>
+                         <Button variant="outline" onClick={handleRecordControl} className="w-full justify-center">
                           <Mic className="mr-2 h-4 w-4" />
                           {audioUrl ? 'Re-record' : 'Record Audio'}
                         </Button>
@@ -435,5 +429,3 @@ export default function HomePageClient() {
     </div>
   );
 }
-
-    
