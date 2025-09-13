@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, useMemo, useEffect } from 'react';
+import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -516,7 +516,7 @@ export default function HomePageClient() {
             />
         )}
         <div className="absolute inset-0 bg-black/30" />
-        <div className="relative w-full max-w-6xl mx-auto h-full">
+        <div className="relative w-full max-w-6xl mx-auto h-full p-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full h-full items-center">
                 <motion.div
                     animate={angerText ? "flushing" : "initial"}
@@ -528,7 +528,7 @@ export default function HomePageClient() {
                             <CardHeader>
                             <CardTitle className="flex items-center gap-2 font-headline">
                                 <FileText className="text-accent" />
-                                Write it down
+                                Your Words
                             </CardTitle>
                             </CardHeader>
                             <CardContent>
@@ -551,7 +551,7 @@ export default function HomePageClient() {
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 font-headline">
                                     <Mic className="text-accent" />
-                                    Upload or Record
+                                    Your Media
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
@@ -590,8 +590,8 @@ export default function HomePageClient() {
   return (
     <div className="container mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-[calc(100vh-80px)]">
       <AnimatePresence mode="wait">
-        {pageState === 'idle' && renderIdleState()}
-        {pageState === 'flushing' && renderFlushingState()}
+        {pageState === 'idle' && <motion.div key="idle-container">{renderIdleState()}</motion.div>}
+        {pageState === 'flushing' && <motion.div key="flushing-container">{renderFlushingState()}</motion.div>}
         {pageState === 'flushed' && <motion.div key="flushed-container">{renderFlushedState()}</motion.div>}
       </AnimatePresence>
        <footer className="w-full mt-12 text-center text-muted-foreground text-sm">
