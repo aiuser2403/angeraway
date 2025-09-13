@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -57,7 +57,7 @@ export default function HomePageClient() {
 
   const toiletImage = PlaceHolderImages.find(img => img.id === 'toilet-background');
 
-  const saveDataToLocalStorage = useCallback((data: Partial<Omit<StoredData, 'timestamp'>>) => {
+  const saveDataToLocalStorage = (data: Partial<Omit<StoredData, 'timestamp'>>) => {
     try {
       const currentDataString = localStorage.getItem(STORAGE_KEY);
       const currentData = currentDataString ? JSON.parse(currentDataString) : {};
@@ -66,7 +66,7 @@ export default function HomePageClient() {
     } catch (error) {
       console.error("Error saving to local storage:", error);
     }
-  }, []);
+  };
 
   useEffect(() => {
     try {
@@ -97,7 +97,7 @@ export default function HomePageClient() {
     if (isContentPresent) {
       saveDataToLocalStorage({ angerText, mediaPreview, audioUrl });
     }
-  }, [angerText, mediaPreview, audioUrl, isContentPresent, saveDataToLocalStorage]);
+  }, [angerText, mediaPreview, audioUrl, isContentPresent]);
 
   useEffect(() => {
     if (audioUrl) {
@@ -138,6 +138,7 @@ export default function HomePageClient() {
   useEffect(() => {
     // Pre-load the flush audio
     const audio = new Audio('https://firebasestorage.googleapis.com/v0/b/prototyper-de2a8.appspot.com/o/public%2Ftoilet-flush.mp3?alt=media&token=85c64287-2598-4444-8461-95ed158f3103');
+    audio.preload = 'auto';
     flushAudioRef.current = audio;
 
     return () => {
@@ -178,14 +179,14 @@ export default function HomePageClient() {
     }
   };
   
-  const handleImageSave = useCallback((newImage: string | null) => {
+  const handleImageSave = (newImage: string | null) => {
     setMediaPreview(newImage);
     if (newImage) {
       saveDataToLocalStorage({ mediaPreview: newImage });
     }
     setIsCropDialogOpen(false);
     setRawImageForCrop(null);
-  }, [saveDataToLocalStorage]);
+  };
 
   const handleCropDialogClose = () => {
     setIsCropDialogOpen(false);
@@ -289,7 +290,7 @@ export default function HomePageClient() {
     setPageState('flushing');
 
     if (flushAudioRef.current) {
-        flushAudioRef.current.play();
+        flushAudioRef.current.play().catch(e => console.error("Error playing flush sound:", e));
     }
 
     setTimeout(() => {
@@ -317,22 +318,24 @@ export default function HomePageClient() {
     flushing: { opacity: 0, y: '100vh', scale: 0.2, transition: { duration: 2, ease: "easeInOut" } },
   };
   
-  const renderMediaContent = () => {
+  const renderMediaContent = (isFlushing = false) => {
     if (mediaPreview) {
         return (
           <div className="w-full h-full relative group">
             <Image src={mediaPreview} alt="Anger media preview" layout="fill" className="object-contain rounded-md" />
-            <div className="absolute top-2 right-2 z-10">
-                <Button size="icon" variant="destructive" onClick={handleDiscardImage} className="rounded-full h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <X className="h-4 w-4" />
-                    <span className="sr-only">Discard Image</span>
-                </Button>
-            </div>
+            {!isFlushing && (
+              <div className="absolute top-2 right-2 z-10">
+                  <Button size="icon" variant="destructive" onClick={handleDiscardImage} className="rounded-full h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <X className="h-4 w-4" />
+                      <span className="sr-only">Discard Image</span>
+                  </Button>
+              </div>
+            )}
           </div>
         );
       }
 
-    if (recordingState === 'recording') {
+    if (recordingState === 'recording' && !isFlushing) {
         return (
           <div className="flex flex-col items-center justify-center flex-1 h-full text-center">
             <Mic className="h-16 w-16 text-red-500 animate-pulse" />
@@ -509,6 +512,7 @@ export default function HomePageClient() {
                 layout="fill"
                 objectFit="cover"
                 data-ai-hint={toiletImage.imageHint}
+                unoptimized
             />
         )}
         <div className="absolute inset-0 bg-black/30" />
@@ -553,7 +557,7 @@ export default function HomePageClient() {
                             <CardContent>
                                 <div className="flex flex-col space-y-4 h-full justify-between min-h-[500px]">
                                     <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-full">
-                                        {renderMediaContent()}
+                                        {renderMediaContent(true)}
                                     </div>
                                 </div>
                             </CardContent>
@@ -596,3 +600,5 @@ export default function HomePageClient() {
     </div>
   );
 }
+
+    
