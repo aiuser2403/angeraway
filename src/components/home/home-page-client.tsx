@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useRef, useMemo, useEffect } from 'react';
+import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,6 +12,8 @@ import FlushPotIcon from '@/components/icons/flush-pot-icon';
 import { useToast } from '@/hooks/use-toast';
 import * as Tone from 'tone';
 import Image from 'next/image';
+import ImageCropDialog from './image-crop-dialog';
+import { getCroppedImg } from '@/lib/image-utils';
 
 type PageState = 'idle' | 'flushing' | 'flushed';
 type RecordingState = 'idle' | 'recording' | 'recorded' | 'denied';
@@ -26,6 +28,7 @@ export default function HomePageClient() {
   const [angerText, setAngerText] = useState('');
   const [angerMedia, setAngerMedia] = useState<File | null>(null);
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const [isCropDialogOpen, setIsCropDialogOpen] = useState(false);
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [pageState, setPageState] = useState<PageState>('idle');
@@ -86,22 +89,39 @@ export default function HomePageClient() {
         return;
       }
       
-      setAngerMedia(file);
-      // Don't reset audio when an image is selected
-      // setRecordingState('idle');
-      // if (audioUrl) {
-      //   URL.revokeObjectURL(audioUrl);
-      //   setAudioUrl(null);
-      // }
-      // audioChunksRef.current = [];
-
       const reader = new FileReader();
       reader.onloadend = () => {
         setMediaPreview(reader.result as string);
+        setIsCropDialogOpen(true);
       };
       reader.readAsDataURL(file);
     }
   };
+
+  const onCropComplete = useCallback(async (croppedAreaPixels: any) => {
+    if (!mediaPreview) return;
+    try {
+      const croppedImageBlob = await getCroppedImg(mediaPreview, croppedAreaPixels);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setMediaPreview(reader.result as string);
+      };
+      reader.readAsDataURL(croppedImageBlob);
+
+      const file = new File([croppedImageBlob], 'cropped-image.jpeg', { type: 'image/jpeg' });
+      setAngerMedia(file);
+      setIsCropDialogOpen(false);
+    } catch (e) {
+      console.error(e);
+      toast({
+        variant: 'destructive',
+        title: 'Error cropping image',
+        description: 'Something went wrong while cropping the image. Please try again.',
+      });
+      setIsCropDialogOpen(false);
+      setMediaPreview(null);
+    }
+  }, [mediaPreview, toast]);
 
   const startRecording = async () => {
     try {
@@ -111,10 +131,6 @@ export default function HomePageClient() {
       }
       audioChunksRef.current = [];
       
-      // We don't want to clear the image when starting to record
-      // setAngerMedia(null);
-      // setMediaPreview(null);
-
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream);
       audioChunksRef.current = [];
@@ -212,6 +228,14 @@ export default function HomePageClient() {
   }
   
   const renderMediaContent = () => {
+    if (mediaPreview) {
+      return (
+        <div className="w-full h-full relative">
+          <Image src={mediaPreview} alt="Anger media preview" layout="fill" objectFit="contain" className="rounded-md" />
+        </div>
+      )
+    }
+
     if (recordingState === 'recording') {
         return (
           <div className="flex flex-col items-center justify-center h-full text-center">
@@ -221,26 +245,15 @@ export default function HomePageClient() {
         );
     }
 
-    if (recordingState === 'recorded') {
+    if (audioUrl) {
         return (
           <div className="flex flex-col items-center justify-center h-full text-center p-4">
             <p className="text-lg mb-4">Listen to your recording:</p>
-            <audio ref={audioRef} src={audioUrl!} controls className="w-full" />
-            <div className="flex gap-4 mt-8 w-full">
-              <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Discard
-              </Button>
-              <Button onClick={handleRerecord} className="w-full justify-center">
-                <Mic className="mr-2 h-4 w-4" />
-                Re-record
-              </Button>
-            </div>
+            <audio ref={audioRef} src={audioUrl} controls className="w-full" />
           </div>
         );
     }
 
-    // Default 'idle' or 'denied' state for audio, but an image might be present
     return (
         <div className="text-center text-muted-foreground">
           <ImageIcon className="mx-auto h-12 w-12" />
@@ -250,7 +263,6 @@ export default function HomePageClient() {
     );
   };
 
-
   const renderIdleState = () => (
     <>
       <div className="text-center mb-12">
@@ -258,7 +270,7 @@ export default function HomePageClient() {
         <p className="mt-2 text-lg text-muted-foreground">Write or record why you're angry.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-[100rem] mx-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-4xl mx-auto">
         <Card className="shadow-lg transform hover:scale-105 transition-transform duration-300">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 font-headline">
@@ -269,7 +281,7 @@ export default function HomePageClient() {
           <CardContent>
             <Textarea
               placeholder="Describe why you’re angry…"
-              className="h-[50rem] resize-none"
+              className="h-96 resize-none"
               value={angerText}
               onChange={(e) => setAngerText(e.target.value)}
               aria-label="Write your anger"
@@ -285,15 +297,9 @@ export default function HomePageClient() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-             <div className="flex flex-col space-y-4 h-full justify-between min-h-[50rem]">
-                <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden">
-                  {mediaPreview ? (
-                     <div className="w-full h-full">
-                        <Image src={mediaPreview} alt="Anger media preview" layout="fill" objectFit="contain" className="rounded-md" />
-                     </div>
-                  ) : (
-                    renderMediaContent()
-                  )}
+             <div className="flex flex-col space-y-4 h-full justify-between min-h-96">
+                <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-64">
+                  {renderMediaContent()}
                 </div>
                 
                 <div className="flex-shrink-0 flex flex-col gap-4 mt-4">
@@ -302,6 +308,19 @@ export default function HomePageClient() {
                         <Trash2 className="mr-2 h-4 w-4" />
                         Remove Image
                       </Button>
+                  )}
+                  
+                  {audioUrl && !mediaPreview && recordingState !== 'recording' && (
+                     <div className="border-t pt-4 flex gap-4 w-full">
+                        <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Discard Audio
+                        </Button>
+                        <Button onClick={handleRerecord} className="w-full justify-center">
+                          <Mic className="mr-2 h-4 w-4" />
+                          Re-record
+                        </Button>
+                      </div>
                   )}
 
                   {recordingState !== 'recording' && (
@@ -317,7 +336,7 @@ export default function HomePageClient() {
                           onChange={handleFileChange} 
                           className="hidden" 
                         />
-                        <Button variant="outline" onClick={handleRecordControl} className="w-full justify-center" disabled={recordingState === 'recorded'}>
+                         <Button variant="outline" onClick={handleRecordControl} className="w-full justify-center" disabled={!!mediaPreview || recordingState === 'recorded'}>
                           <Mic className="mr-2 h-4 w-4" />
                           Record Audio
                         </Button>
@@ -329,23 +348,6 @@ export default function HomePageClient() {
                           <Square className="mr-2 h-4 w-4" />
                           Stop Recording
                       </Button>
-                  )}
-
-                  {recordingState === 'recorded' && (
-                     <div className="border-t pt-4">
-                        <p className="text-lg mb-4 text-center">Listen to your recording:</p>
-                        <audio ref={audioRef} src={audioUrl!} controls className="w-full" />
-                        <div className="flex gap-4 mt-4 w-full">
-                          <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Discard Audio
-                          </Button>
-                          <Button onClick={handleRerecord} className="w-full justify-center">
-                            <Mic className="mr-2 h-4 w-4" />
-                            Re-record
-                          </Button>
-                        </div>
-                      </div>
                   )}
                 </div>
             </div>
@@ -369,6 +371,20 @@ export default function HomePageClient() {
           </motion.div>
         )}
       </AnimatePresence>
+      
+      {mediaPreview && (
+        <ImageCropDialog 
+          isOpen={isCropDialogOpen}
+          onClose={() => {
+            setIsCropDialogOpen(false);
+            if (!angerMedia) { // If crop was cancelled
+              setMediaPreview(null);
+            }
+          }}
+          imageSrc={mediaPreview}
+          onCropComplete={onCropComplete}
+        />
+      )}
     </>
   );
 
