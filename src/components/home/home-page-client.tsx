@@ -98,22 +98,31 @@ export default function HomePageClient() {
   }, [angerText, mediaPreview, audioUrl, isContentPresent]);
 
   useEffect(() => {
+    let currentAudioRef: HTMLAudioElement | null = null;
+  
     if (audioUrl && typeof window !== 'undefined') {
-        audioRef.current = new Audio(audioUrl);
-        
-        const handleEnded = () => setIsAudioPlaying(false);
-        const currentAudioRef = audioRef.current;
-        currentAudioRef.addEventListener('ended', handleEnded);
-
-        return () => {
-            currentAudioRef.removeEventListener('ended', handleEnded);
-            currentAudioRef.pause();
-        };
+      audioRef.current = new Audio(audioUrl);
+      currentAudioRef = audioRef.current;
+  
+      const handleEnded = () => setIsAudioPlaying(false);
+      currentAudioRef.addEventListener('ended', handleEnded);
+  
+      return () => {
+        if (currentAudioRef) {
+          currentAudioRef.removeEventListener('ended', handleEnded);
+          currentAudioRef.pause();
+        }
+        // Also ensure we reset the main ref if the URL changes
+        if (audioRef.current === currentAudioRef) {
+            audioRef.current = null;
+        }
+      };
     } else {
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
       }
+      setIsAudioPlaying(false);
     }
   }, [audioUrl]);
 
@@ -180,20 +189,20 @@ export default function HomePageClient() {
   }
 
   const startRecording = async () => {
+    // Stop any currently playing audio before re-recording
+    if (audioRef.current && isAudioPlaying) {
+      audioRef.current.pause();
+      setIsAudioPlaying(false);
+    }
+    // Clear previous audio URL to trigger useEffect cleanup
+    setAudioUrl(null);
+    saveDataToLocalStorage({ audioUrl: null });
+    
     try {
-      if (audioUrl) {
-        setAudioUrl(null);
-        saveDataToLocalStorage({ audioUrl: null });
-      }
-      if (isAudioPlaying && audioRef.current) {
-        audioRef.current.pause();
-        setIsAudioPlaying(false);
-      }
       audioChunksRef.current = [];
       
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-      audioChunksRef.current = [];
 
       mediaRecorderRef.current.ondataavailable = (event) => {
         audioChunksRef.current.push(event.data);
@@ -207,9 +216,9 @@ export default function HomePageClient() {
             const base64Audio = reader.result as string;
             setAudioUrl(base64Audio);
             saveDataToLocalStorage({ audioUrl: base64Audio });
-            setRecordingState('recorded');
         };
         reader.readAsDataURL(audioBlob);
+        setRecordingState('recorded');
 
         stream.getTracks().forEach(track => track.stop());
       };
@@ -259,9 +268,9 @@ export default function HomePageClient() {
   const handleDiscardAudio = () => {
     if (audioRef.current && isAudioPlaying) {
         audioRef.current.pause();
-        setIsAudioPlaying(false);
     }
-    setAudioUrl(null);
+    // Setting URL to null will trigger the cleanup effect
+    setAudioUrl(null); 
     saveDataToLocalStorage({ audioUrl: null });
     setRecordingState('idle');
     audioChunksRef.current = [];
@@ -638,9 +647,5 @@ export default function HomePageClient() {
     </div>
   );
 }
-
-    
-
-    
 
     
