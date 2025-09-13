@@ -66,6 +66,7 @@ export default function ImageCropDialog({ isOpen, onClose, imageSrc, onCropCompl
             onZoomChange={(zoom) => setZoom(zoom)}
             onRotationChange={(rotation) => setRotation(rotation)}
             onCropComplete={onCropCompleteInternal}
+            aspect={undefined}
           />
         </div>
         <div className="grid gap-4 py-4">
@@ -99,10 +100,8 @@ export default function ImageCropDialog({ isOpen, onClose, imageSrc, onCropCompl
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave}>Save Changes</Button>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleSave}>Save</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
