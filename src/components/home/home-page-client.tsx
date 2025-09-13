@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Image as ImageIcon, Mic, FileText, Smile, Square, Trash2 } from 'lucide-react';
+import { Image as ImageIcon, Mic, FileText, Smile, Square, Trash2, X } from 'lucide-react';
 import FlushPotIcon from '@/components/icons/flush-pot-icon';
 import { useToast } from '@/hooks/use-toast';
 import * as Tone from 'tone';
@@ -222,8 +222,7 @@ export default function HomePageClient() {
     setTimeout(() => {
       setPageState('flushed');
       setAngerText('');
-      setAngerMedia(null);
-      setMediaPreview(null);
+      handleDiscardImage();
       handleDiscardAudio();
     }, 2000);
   };
@@ -235,8 +234,14 @@ export default function HomePageClient() {
   const renderMediaContent = () => {
     if (mediaPreview) {
       return (
-        <div className="w-full h-full relative">
+        <div className="w-full h-full relative group">
           <Image src={mediaPreview} alt="Anger media preview" layout="fill" objectFit="contain" className="rounded-md" />
+          <div className="absolute top-2 right-2 z-10">
+              <Button size="icon" variant="destructive" onClick={handleDiscardImage} className="rounded-full h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <X className="h-4 w-4" />
+                  <span className="sr-only">Discard Image</span>
+              </Button>
+          </div>
         </div>
       )
     }
@@ -275,8 +280,8 @@ export default function HomePageClient() {
         <p className="mt-2 text-lg text-muted-foreground">Write or record why you're angry.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl mx-auto">
-        <Card className="shadow-lg transform hover:scale-105 transition-transform duration-300">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-5xl mx-auto">
+        <Card className="shadow-lg transform hover:scale-[1.02] transition-transform duration-300">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 font-headline">
               <FileText className="text-accent" />
@@ -286,7 +291,7 @@ export default function HomePageClient() {
           <CardContent>
             <Textarea
               placeholder="Describe why you’re angry…"
-              className="min-h-[550px] resize-none"
+              className="min-h-[450px] resize-none"
               value={angerText}
               onChange={(e) => setAngerText(e.target.value)}
               aria-label="Write your anger"
@@ -294,7 +299,7 @@ export default function HomePageClient() {
           </CardContent>
         </Card>
         
-        <Card className="shadow-lg transform hover:scale-105 transition-transform duration-300">
+        <Card className="shadow-lg transform hover:scale-[1.02] transition-transform duration-300">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 font-headline">
               <Mic className="text-accent" />
@@ -302,7 +307,7 @@ export default function HomePageClient() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-             <div className="flex flex-col space-y-4 h-full justify-between min-h-[550px]">
+             <div className="flex flex-col space-y-4 h-full justify-between min-h-[450px]">
                 <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-full">
                   {renderMediaContent()}
                 </div>
@@ -324,9 +329,9 @@ export default function HomePageClient() {
 
                   {recordingState !== 'recording' && (
                      <div className="flex gap-4">
-                        <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center">
+                        <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center" disabled={!!mediaPreview}>
                           <ImageIcon className="mr-2 h-4 w-4" />
-                          {mediaPreview ? 'Change Image' : 'Upload Image'}
+                          {mediaPreview ? 'Image Uploaded' : 'Upload Image'}
                         </Button>
                         <input 
                           type="file" 
@@ -377,8 +382,7 @@ export default function HomePageClient() {
           onClose={() => {
             setIsCropDialogOpen(false);
             if (!angerMedia) { // If crop was cancelled
-              setMediaPreview(null);
-              setRawImageForCrop(null);
+              handleDiscardImage();
             }
           }}
           imageSrc={rawImageForCrop}
@@ -429,3 +433,5 @@ export default function HomePageClient() {
     </div>
   );
 }
+
+    
