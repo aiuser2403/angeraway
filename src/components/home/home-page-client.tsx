@@ -12,7 +12,6 @@ import { useToast } from '@/hooks/use-toast';
 import * as Tone from 'tone';
 import Image from 'next/image';
 import ImageCropDialog from './image-crop-dialog';
-import { getCroppedImg } from '@/lib/image-utils';
 
 type PageState = 'idle' | 'flushing' | 'flushed';
 type RecordingState = 'idle' | 'recording' | 'recorded' | 'denied';
@@ -173,31 +172,11 @@ export default function HomePageClient() {
     }
   };
   
-  const handleCropSave = async (croppedAreaPixels: any, rotation: number) => {
-    if (!rawImageForCrop) return;
-    try {
-      const croppedImageBlob = await getCroppedImg(rawImageForCrop, croppedAreaPixels, rotation);
-      
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const dataUrl = reader.result as string;
-        setMediaPreview(dataUrl);
-        saveDataToLocalStorage({ mediaPreview: dataUrl });
-      };
-      reader.readAsDataURL(croppedImageBlob);
-
-      setIsCropDialogOpen(false);
-      setRawImageForCrop(null);
-    } catch (e) {
-      console.error(e);
-      toast({
-        variant: 'destructive',
-        title: 'Error cropping image',
-        description: 'Something went wrong. Please try again.',
-      });
-      setIsCropDialogOpen(false);
-      setRawImageForCrop(null);
-    }
+  const handleImageSave = (newImage: string | null) => {
+    setMediaPreview(newImage);
+    saveDataToLocalStorage({ mediaPreview: newImage });
+    setIsCropDialogOpen(false);
+    setRawImageForCrop(null);
   };
 
   const handleCropDialogClose = () => {
@@ -514,7 +493,7 @@ export default function HomePageClient() {
           isOpen={isCropDialogOpen}
           onClose={handleCropDialogClose}
           imageSrc={rawImageForCrop}
-          onSave={handleCropSave}
+          onSave={handleImageSave}
         />
       )}
     </>
@@ -559,8 +538,10 @@ export default function HomePageClient() {
         {pageState === 'flushed' && renderFlushedState()}
       </AnimatePresence>
        <footer className="w-full mt-12 text-center text-muted-foreground text-sm">
-        <p>Disclaimer: None of your message, uploaded images or recording will be saved on this page after 60 minutes</p>
+        <p>Disclaimer: None of your message, uploaded images or recording will be saved on this page after 30 minutes</p>
       </footer>
     </div>
   );
 }
+
+    
