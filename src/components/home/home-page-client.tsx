@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useRef, useMemo, useEffect } from 'react';
@@ -96,6 +97,14 @@ export default function HomePageClient() {
 
   const startRecording = async () => {
     try {
+      // Clear previous audio recording if it exists
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl);
+        setAudioUrl(null);
+      }
+      audioChunksRef.current = [];
+      setRecordingState('idle');
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream);
       audioChunksRef.current = [];
@@ -136,7 +145,6 @@ export default function HomePageClient() {
 
   const handleRecordControl = () => {
     if (recordingState === 'idle' || recordingState === 'denied' || recordingState === 'recorded') {
-      handleRerecord();
       startRecording();
     } else if (recordingState === 'recording') {
       stopRecording();
@@ -199,7 +207,7 @@ export default function HomePageClient() {
                 <Trash2 className="mr-2 h-4 w-4" />
                 Discard
               </Button>
-              <Button onClick={() => { setRecordingState('idle'); startRecording(); }} className="w-full justify-center">
+              <Button onClick={() => { startRecording(); }} className="w-full justify-center">
                 <Mic className="mr-2 h-4 w-4" />
                 Re-record
               </Button>
