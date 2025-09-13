@@ -19,10 +19,10 @@ type ImageCropDialogProps = {
   isOpen: boolean;
   onClose: () => void;
   imageSrc: string;
-  onCropComplete: (croppedAreaPixels: Area) => void;
+  onSave: (croppedAreaPixels: Area) => void;
 };
 
-export default function ImageCropDialog({ isOpen, onClose, imageSrc, onCropComplete }: ImageCropDialogProps) {
+export default function ImageCropDialog({ isOpen, onClose, imageSrc, onSave }: ImageCropDialogProps) {
   const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
@@ -40,13 +40,13 @@ export default function ImageCropDialog({ isOpen, onClose, imageSrc, onCropCompl
     setRotation(value[0]);
   }, []);
 
-  const onCropCompleteInternal = useCallback((croppedArea: Area, croppedAreaPixels: Area) => {
+  const onCropComplete = useCallback((croppedArea: Area, croppedAreaPixels: Area) => {
     setCroppedAreaPixels(croppedAreaPixels);
   }, []);
 
   const handleSave = () => {
     if (croppedAreaPixels) {
-      onCropComplete(croppedAreaPixels);
+      onSave(croppedAreaPixels);
     }
   };
 
@@ -65,7 +65,7 @@ export default function ImageCropDialog({ isOpen, onClose, imageSrc, onCropCompl
             onCropChange={onCropChange}
             onZoomChange={(zoom) => setZoom(zoom)}
             onRotationChange={(rotation) => setRotation(rotation)}
-            onCropComplete={onCropCompleteInternal}
+            onCropComplete={onCropComplete}
             aspect={undefined}
           />
         </div>
@@ -107,3 +107,5 @@ export default function ImageCropDialog({ isOpen, onClose, imageSrc, onCropCompl
     </Dialog>
   );
 }
+
+    

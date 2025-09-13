@@ -98,38 +98,32 @@ export default function HomePageClient() {
       reader.readAsDataURL(file);
     }
   };
-
-  const onCropComplete = useCallback(async (croppedAreaPixels: any) => {
+  
+  const handleCropSave = async (croppedAreaPixels: any) => {
     if (!rawImageForCrop) return;
     try {
       const croppedImageBlob = await getCroppedImg(rawImageForCrop, croppedAreaPixels);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setMediaPreview(reader.result as string);
-      };
-      reader.readAsDataURL(croppedImageBlob);
-
       const file = new File([croppedImageBlob], 'cropped-image.jpeg', { type: 'image/jpeg' });
       setAngerMedia(file);
-      setIsCropDialogOpen(false);
-      setRawImageForCrop(null);
+      setMediaPreview(URL.createObjectURL(croppedImageBlob));
     } catch (e) {
       console.error(e);
       toast({
         variant: 'destructive',
         title: 'Error cropping image',
-        description: 'Something went wrong while cropping the image. Please try again.',
+        description: 'Something went wrong. Please try again.',
       });
-      setIsCropDialogOpen(false);
-      setRawImageForCrop(null);
-      setMediaPreview(null);
+    } finally {
+        setIsCropDialogOpen(false);
+        setRawImageForCrop(null);
     }
-  }, [rawImageForCrop, toast]);
-  
+  };
+
   const handleCropDialogClose = () => {
     setIsCropDialogOpen(false);
-    if (!angerMedia) { // If crop was cancelled without saving
-      handleDiscardImage();
+    setRawImageForCrop(null);
+    if(fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   }
 
@@ -206,9 +200,11 @@ export default function HomePageClient() {
   }
 
   const handleDiscardImage = () => {
+    if (mediaPreview) {
+        URL.revokeObjectURL(mediaPreview);
+    }
     setAngerMedia(null);
     setMediaPreview(null);
-    setRawImageForCrop(null);
     if(fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -335,9 +331,9 @@ export default function HomePageClient() {
 
                   {recordingState !== 'recording' && (
                      <div className="flex gap-4">
-                        <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center">
+                        <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full justify-center" disabled={!!mediaPreview}>
                           <ImageIcon className="mr-2 h-4 w-4" />
-                          {mediaPreview ? 'Change Image' : 'Upload Image'}
+                          {mediaPreview ? 'Image Uploaded' : 'Upload Image'}
                         </Button>
                         <input 
                           type="file" 
@@ -387,7 +383,7 @@ export default function HomePageClient() {
           isOpen={isCropDialogOpen}
           onClose={handleCropDialogClose}
           imageSrc={rawImageForCrop}
-          onCropComplete={onCropComplete}
+          onSave={handleCropSave}
         />
       )}
     </>
@@ -434,3 +430,5 @@ export default function HomePageClient() {
     </div>
   );
 }
+
+    
