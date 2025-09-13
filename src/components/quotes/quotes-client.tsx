@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { getNewQuote } from '@/app/actions';
-import { RefreshCw, Zap } from 'lucide-react';
+import { RefreshCw, Zap, Smile } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 type QuotesClientProps = {
@@ -50,6 +50,17 @@ export default function QuotesClient({ initialQuotes }: QuotesClientProps) {
     }
   };
 
+  const renderQuote = (quote: string) => {
+    if (quote === "Smile") {
+      return (
+        <div className="flex items-center justify-center gap-2">
+          “{quote}” <Smile className="inline-block" />
+        </div>
+      )
+    }
+    return `“${quote}”`;
+  }
+
   return (
     <div className="flex flex-col items-center justify-center text-white min-h-[400px]">
        <div className="text-center mb-8">
@@ -67,7 +78,7 @@ export default function QuotesClient({ initialQuotes }: QuotesClientProps) {
             className="absolute"
           >
             <blockquote className="text-2xl md:text-4xl italic font-headline text-center leading-relaxed">
-              “{quotes[currentIndex]}”
+              {renderQuote(quotes[currentIndex])}
             </blockquote>
           </motion.div>
         </AnimatePresence>

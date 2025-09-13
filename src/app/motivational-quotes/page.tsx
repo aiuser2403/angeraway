@@ -16,6 +16,11 @@ const initialQuotes = [
   "Let yourself rest.",
   "It’s okay to ask for help.",
   "You matter.",
+  "Make peace with your past",
+  "Time heals almost everything",
+  "Don't compare your life to others",
+  "Stop thinking too much",
+  "Smile"
 ];
 
 export default function MotivationalQuotesPage() {
