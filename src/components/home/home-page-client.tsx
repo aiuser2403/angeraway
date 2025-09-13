@@ -98,26 +98,24 @@ export default function HomePageClient() {
   }, [angerText, mediaPreview, audioUrl, isContentPresent]);
 
   useEffect(() => {
-    let currentAudioRef: HTMLAudioElement | null = null;
-  
+    // This effect manages the lifecycle of the Audio object.
     if (audioUrl && typeof window !== 'undefined') {
       audioRef.current = new Audio(audioUrl);
-      currentAudioRef = audioRef.current;
+      const currentAudioRef = audioRef.current;
   
       const handleEnded = () => setIsAudioPlaying(false);
       currentAudioRef.addEventListener('ended', handleEnded);
   
+      // Cleanup function: This is crucial to prevent memory leaks and errors.
       return () => {
         if (currentAudioRef) {
-          currentAudioRef.removeEventListener('ended', handleEnded);
           currentAudioRef.pause();
-        }
-        // Also ensure we reset the main ref if the URL changes
-        if (audioRef.current === currentAudioRef) {
-            audioRef.current = null;
+          currentAudioRef.removeEventListener('ended', handleEnded);
+          audioRef.current = null; // Set the ref to null
         }
       };
     } else {
+      // If audioUrl is null, ensure any existing audio is stopped and reset.
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
@@ -189,12 +187,7 @@ export default function HomePageClient() {
   }
 
   const startRecording = async () => {
-    // Stop any currently playing audio before re-recording
-    if (audioRef.current && isAudioPlaying) {
-      audioRef.current.pause();
-      setIsAudioPlaying(false);
-    }
-    // Clear previous audio URL to trigger useEffect cleanup
+    // Crucially, set the audioUrl to null to trigger the cleanup effect for the old audio.
     setAudioUrl(null);
     saveDataToLocalStorage({ audioUrl: null });
     
@@ -214,7 +207,7 @@ export default function HomePageClient() {
         const reader = new FileReader();
         reader.onloadend = () => {
             const base64Audio = reader.result as string;
-            setAudioUrl(base64Audio);
+            setAudioUrl(base64Audio); // This will trigger the useEffect to create a new Audio object
             saveDataToLocalStorage({ audioUrl: base64Audio });
         };
         reader.readAsDataURL(audioBlob);
@@ -256,7 +249,7 @@ export default function HomePageClient() {
     if (audioRef.current) {
         if (isAudioPlaying) {
             audioRef.current.pause();
-            audioRef.current.currentTime = 0;
+            // No need to reset currentTime, allows resuming
             setIsAudioPlaying(false);
         } else {
             audioRef.current.play().catch(e => console.error("Error playing audio:", e));
@@ -266,11 +259,7 @@ export default function HomePageClient() {
   };
 
   const handleDiscardAudio = () => {
-    if (audioRef.current && isAudioPlaying) {
-        audioRef.current.pause();
-    }
-    // Setting URL to null will trigger the cleanup effect
-    setAudioUrl(null); 
+    setAudioUrl(null); // This will trigger the cleanup effect
     saveDataToLocalStorage({ audioUrl: null });
     setRecordingState('idle');
     audioChunksRef.current = [];
@@ -302,7 +291,7 @@ export default function HomePageClient() {
       setPageState('flushed');
       setAngerText('');
       setMediaPreview(null);
-      setAudioUrl(null);
+      setAudioUrl(null); // This triggers the final audio cleanup
       setRecordingState('idle');
 
       try {
@@ -647,5 +636,7 @@ export default function HomePageClient() {
     </div>
   );
 }
+
+    
 
     
