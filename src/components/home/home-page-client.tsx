@@ -59,7 +59,8 @@ export default function HomePageClient() {
 
   const saveDataToLocalStorage = (data: Partial<StoredData>) => {
     try {
-      const currentData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') as Partial<StoredData>;
+      const currentDataString = localStorage.getItem(STORAGE_KEY);
+      const currentData = currentDataString ? JSON.parse(currentDataString) : {};
       const newData = { ...currentData, ...data, timestamp: Date.now() };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
     } catch (error) {
@@ -79,7 +80,7 @@ export default function HomePageClient() {
           setAngerText(storedData.angerText || '');
           setMediaPreview(storedData.mediaPreview || null);
           if (storedData.audioUrl) {
-            // Re-create blob URL as it might be revoked
+            // Re-create blob URL from base64 string
             fetch(storedData.audioUrl)
               .then(res => res.blob())
               .then(blob => {
@@ -240,10 +241,10 @@ export default function HomePageClient() {
             const base64Audio = reader.result as string;
             setAudioUrl(base64Audio);
             saveDataToLocalStorage({ audioUrl: base64Audio });
+            setRecordingState('recorded');
         };
         reader.readAsDataURL(audioBlob);
 
-        setRecordingState('recorded');
         stream.getTracks().forEach(track => track.stop());
       };
 
@@ -324,6 +325,7 @@ export default function HomePageClient() {
         URL.revokeObjectURL(audioUrl);
       }
       setAudioUrl(null);
+      setRecordingState('idle');
       try {
         localStorage.removeItem(STORAGE_KEY);
       } catch (error) {
@@ -581,4 +583,4 @@ export default function HomePageClient() {
   );
 }
 
-  
+    
