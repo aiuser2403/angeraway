@@ -98,22 +98,25 @@ export default function HomePageClient() {
   }, [angerText, mediaPreview, audioUrl, isContentPresent]);
 
   useEffect(() => {
-    if (audioUrl && !audioRef.current) {
-        const audioElement = new Audio(audioUrl);
-        audioRef.current = audioElement;
+    if (audioUrl) {
+        if (!audioRef.current) {
+            audioRef.current = new Audio(audioUrl);
+        } else {
+            audioRef.current.src = audioUrl;
+        }
 
         const handleEnded = () => setIsAudioPlaying(false);
-        audioElement.addEventListener('ended', handleEnded);
+        const currentAudioRef = audioRef.current;
+        currentAudioRef.addEventListener('ended', handleEnded);
 
         return () => {
-            audioElement.removeEventListener('ended', handleEnded);
-            if (audioRef.current) {
-              audioRef.current.pause();
-              audioRef.current = null;
-            }
+            currentAudioRef.removeEventListener('ended', handleEnded);
         }
-    } else if (audioUrl && audioRef.current && audioRef.current.src !== audioUrl) {
-        audioRef.current.src = audioUrl;
+    } else {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
     }
   }, [audioUrl]);
 
@@ -246,7 +249,7 @@ export default function HomePageClient() {
             audioRef.current.currentTime = 0;
             setIsAudioPlaying(false);
         } else {
-            audioRef.current.play();
+            audioRef.current.play().catch(e => console.error("Error playing audio:", e));
             setIsAudioPlaying(true);
         }
     }
@@ -261,7 +264,6 @@ export default function HomePageClient() {
     saveDataToLocalStorage({ audioUrl: null });
     setRecordingState('idle');
     audioChunksRef.current = [];
-    if(audioRef.current) audioRef.current = null;
   }
 
   const handleDiscardImage = () => {
@@ -280,15 +282,19 @@ export default function HomePageClient() {
         flushAudioRef.current.play().catch(e => console.error("Error playing flush sound:", e));
     }
 
+    // Stop listening audio if playing
+    if (audioRef.current && isAudioPlaying) {
+        audioRef.current.pause();
+        setIsAudioPlaying(false);
+    }
+
     setTimeout(() => {
       setPageState('flushed');
       setAngerText('');
       setMediaPreview(null);
-      setAudioUrl(null);
+      setAudioUrl(null); // This will also trigger the useEffect to nullify audioRef
       setRecordingState('idle');
-      if (audioRef.current) {
-        audioRef.current = null;
-      }
+
       try {
         localStorage.removeItem(STORAGE_KEY);
       } catch (error) {
@@ -530,15 +536,6 @@ export default function HomePageClient() {
             </Button>
              <Button variant="link" onClick={() => setPageState('idle')}>Go back and edit</Button>
         </div>
-        
-        {rawImageForCrop && (
-            <ImageCropDialog 
-            isOpen={isCropDialogOpen}
-            onClose={handleCropDialogClose}
-            imageSrc={rawImageForCrop}
-            onSave={handleImageSave}
-            />
-        )}
     </motion.div>
   );
 
@@ -631,7 +628,7 @@ export default function HomePageClient() {
       <AnimatePresence mode="wait">
         {pageState === 'idle' && <motion.div key="idle-container" className="w-full">{renderIdleState()}</motion.div>}
         {pageState === 'confirming' && <motion.div key="confirming-container" className="w-full">{renderConfirmingState()}</motion.div>}
-        {pageState === 'flushing' && <motion.div key="flushing-container">{renderFlushingState()}</motion.div>}
+        {pageState === 'flushing' && <motion.div key="flushing-container" className="w-full">{renderFlushingState()}</motion.div>}
         {pageState === 'flushed' && <motion.div key="flushed-container">{renderFlushedState()}</motion.div>}
       </AnimatePresence>
        <footer className="w-full mt-12 text-center text-muted-foreground text-sm">
