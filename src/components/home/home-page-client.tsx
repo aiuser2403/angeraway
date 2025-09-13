@@ -98,7 +98,7 @@ export default function HomePageClient() {
   }, [angerText, mediaPreview, audioUrl, isContentPresent]);
 
   useEffect(() => {
-    if (audioUrl) {
+    if (audioUrl && typeof window !== 'undefined') {
         if (!audioRef.current) {
             audioRef.current = new Audio(audioUrl);
         } else {
@@ -111,7 +111,11 @@ export default function HomePageClient() {
 
         return () => {
             currentAudioRef.removeEventListener('ended', handleEnded);
-        }
+            if (isAudioPlaying) {
+              currentAudioRef.pause();
+              setIsAudioPlaying(false);
+            }
+        };
     } else {
       if (audioRef.current) {
         audioRef.current.pause();
@@ -187,6 +191,10 @@ export default function HomePageClient() {
       if (audioUrl) {
         setAudioUrl(null);
         saveDataToLocalStorage({ audioUrl: null });
+      }
+      if (isAudioPlaying && audioRef.current) {
+        audioRef.current.pause();
+        setIsAudioPlaying(false);
       }
       audioChunksRef.current = [];
       
@@ -292,7 +300,7 @@ export default function HomePageClient() {
       setPageState('flushed');
       setAngerText('');
       setMediaPreview(null);
-      setAudioUrl(null); // This will also trigger the useEffect to nullify audioRef
+      setAudioUrl(null);
       setRecordingState('idle');
 
       try {
@@ -637,5 +645,7 @@ export default function HomePageClient() {
     </div>
   );
 }
+
+    
 
     
