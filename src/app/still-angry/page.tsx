@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle2, AlertTriangle } from 'lucide-react';
 
@@ -7,6 +8,11 @@ const suggestions = [
   'Call or text a friend you trust and talk about it.',
   'Write down everything you are feeling, without judgment.',
   'Listen to a calming playlist or a guided meditation.',
+  'Count quietly to ten before reacting.',
+  'Try gentle stretches or yoga for relaxation.',
+  'Imagine a peaceful place or memory.',
+  'Use a little humor to lighten up the mood.',
+  'Forgive and let go—don\'t hold a grudge',
 ];
 
 const avoidances = [
