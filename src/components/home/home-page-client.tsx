@@ -105,10 +105,10 @@ export default function HomePageClient() {
   }, []);
 
   useEffect(() => {
-    if (angerText) {
-      saveDataToLocalStorage({ angerText });
+    if (isContentPresent) {
+      saveDataToLocalStorage({ angerText, mediaPreview, audioUrl });
     }
-  }, [angerText]);
+  }, [angerText, mediaPreview, audioUrl, isContentPresent]);
 
   useEffect(() => {
     if (inactivityTimerRef.current) {
@@ -147,11 +147,11 @@ export default function HomePageClient() {
 
     return () => {
       synth.dispose();
-      if (audioUrl) {
+      if (audioUrl && audioUrl.startsWith('blob:')) {
         URL.revokeObjectURL(audioUrl);
       }
     };
-  }, [audioUrl]);
+  }, []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -187,15 +187,18 @@ export default function HomePageClient() {
     if (!rawImageForCrop) return;
     try {
       const croppedImageBlob = await getCroppedImg(rawImageForCrop, croppedAreaPixels);
+      const croppedImageUrl = URL.createObjectURL(croppedImageBlob);
+      setMediaPreview(croppedImageUrl);
+      
       const reader = new FileReader();
       reader.onloadend = () => {
         const dataUrl = reader.result as string;
-        setMediaPreview(dataUrl);
         saveDataToLocalStorage({ mediaPreview: dataUrl });
-        setIsCropDialogOpen(false);
-        setRawImageForCrop(null);
       };
       reader.readAsDataURL(croppedImageBlob);
+
+      setIsCropDialogOpen(false);
+      setRawImageForCrop(null);
     } catch (e) {
       console.error(e);
       toast({
@@ -299,6 +302,9 @@ export default function HomePageClient() {
   }
 
   const handleDiscardImage = () => {
+    if (mediaPreview && mediaPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(mediaPreview);
+    }
     setMediaPreview(null);
     saveDataToLocalStorage({ mediaPreview: null });
     if(fileInputRef.current) {
@@ -320,8 +326,11 @@ export default function HomePageClient() {
     setTimeout(() => {
       setPageState('flushed');
       setAngerText('');
+      if (mediaPreview && mediaPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(mediaPreview);
+      }
       setMediaPreview(null);
-      if (audioUrl) {
+      if (audioUrl && audioUrl.startsWith('blob:')) {
         URL.revokeObjectURL(audioUrl);
       }
       setAudioUrl(null);
@@ -582,5 +591,7 @@ export default function HomePageClient() {
     </div>
   );
 }
+
+    
 
     
