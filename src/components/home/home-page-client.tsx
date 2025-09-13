@@ -92,6 +92,7 @@ export default function HomePageClient() {
       console.error("Error loading from local storage:", error);
       localStorage.removeItem(STORAGE_KEY);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -296,10 +297,29 @@ export default function HomePageClient() {
   };
   
   const handleEmail = () => {
-    toast({
-        title: "Feature coming soon!",
-        description: "The ability to email your thoughts is not yet implemented.",
-    });
+    const subject = "My thoughts from Anger Away";
+    let body = angerText;
+
+    if (!angerText && !mediaPreview && !audioUrl) {
+      toast({
+        variant: "destructive",
+        title: "Nothing to email",
+        description: "Write a message, upload an image, or record audio first.",
+      });
+      return;
+    }
+    
+    // Note: mailto: does not reliably support attachments from data URIs.
+    // We will only include the text.
+    if (mediaPreview) {
+      body += "\n\n[An image was included with this entry, but cannot be attached to this email.]";
+    }
+    if (audioUrl) {
+      body += "\n\n[A recording was included with this entry, but cannot be attached to this email.]";
+    }
+
+    const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoLink;
   };
 
   const handleReset = () => {
@@ -544,4 +564,5 @@ export default function HomePageClient() {
   );
 }
 
+    
     
