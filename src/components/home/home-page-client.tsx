@@ -543,7 +543,7 @@ export default function HomePageClient() {
       className="text-center"
     >
       <div className="flex justify-center items-center">
-        <PleasantSmileyIcon className="w-48 h-48 text-accent" />
+        <PleasantSmileyIcon className="w-48 h-48" />
       </div>
       <p className="text-3xl font-headline mt-8">Ahhh, much better.</p>
       <Button onClick={handleReset} className="mt-8" variant="outline">

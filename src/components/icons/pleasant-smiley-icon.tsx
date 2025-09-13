@@ -9,26 +9,45 @@ const PleasantSmileyIcon = React.forwardRef<
   return (
     <svg
       ref={ref}
-      viewBox="0 0 24 24"
-      fill="none"
+      viewBox="0 0 100 100"
       xmlns="http://www.w3.org/2000/svg"
       className={cn('h-6 w-6', className)}
       {...props}
     >
-      <circle cx="12" cy="12" r="10" fill="hsl(var(--accent))" fillOpacity="0.2" />
-      <path
-        d="M12 12m-10 0a10 10 0 1 0 20 0a10 10 0 1 0-20 0"
-        stroke="hsl(var(--accent))"
-        strokeWidth="1.5"
+      <defs>
+        <radialGradient id="faceGradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+          <stop offset="0%" style={{ stopColor: '#FFDD00', stopOpacity: 1 }} />
+          <stop offset="90%" style={{ stopColor: '#FFC300', stopOpacity: 1 }} />
+          <stop offset="100%" style={{ stopColor: '#E6A200', stopOpacity: 1 }} />
+        </radialGradient>
+        <radialGradient id="highlightGradient" cx="50%" cy="50%" r="50%" fx="35%" fy="30%">
+          <stop offset="0%" style={{ stopColor: 'white', stopOpacity: 0.7 }} />
+          <stop offset="100%" style={{ stopColor: 'white', stopOpacity: 0 }} />
+        </radialGradient>
+      </defs>
+      
+      {/* Main face with gradient */}
+      <circle cx="50" cy="50" r="48" fill="url(#faceGradient)" stroke="#B8860B" strokeWidth="2" />
+      
+      {/* Eyes */}
+      <ellipse cx="35" cy="40" rx="8" ry="12" fill="#2F1B00" />
+      <ellipse cx="65" cy="40" rx="8" ry="12" fill="#2F1B00" />
+      
+      {/* Smile */}
+      <path 
+        d="M 25,65 Q 50,85 75,65" 
+        fill="none" 
+        stroke="#2F1B00" 
+        strokeWidth="6" 
+        strokeLinecap="round" 
       />
-      <path
-        d="M9.006 14.5c.556 1 1.48 1.5 2.994 1.5s2.438-.5 2.994-1.5"
-        stroke="hsl(var(--accent))"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <circle cx="9" cy="10" r="1" fill="hsl(var(--accent))" />
-      <circle cx="15" cy="10" r="1" fill="hsl(var(--accent))" />
+
+      {/* Glossy highlight */}
+      <ellipse cx="50" cy="45" rx="35" ry="25" fill="url(#highlightGradient)" />
+
+      {/* Small sparkle */}
+      <path d="M 20 70 l 5 -2 l 2 5 l -5 2 Z" fill="white" opacity="0.8" transform="rotate(-15 22.5 72.5)"/>
+      <path d="M 20 70 l 5 2 l 2 -5 l -5 -2 Z" fill="white" opacity="0.8" transform="rotate(-15 22.5 72.5)"/>
     </svg>
   );
 });
