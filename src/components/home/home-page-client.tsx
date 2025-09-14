@@ -58,8 +58,7 @@ export default function HomePageClient() {
     try {
       const dataToStore: StoredData = {
         angerText,
-        // Only save to localStorage if it's a data URL (base64). Blob URLs are temporary.
-        mediaPreview: mediaPreview && !mediaPreview.startsWith('blob:') ? mediaPreview : null,
+        mediaPreview,
         audioUrl,
         timestamp: Date.now(),
       };
@@ -166,8 +165,6 @@ export default function HomePageClient() {
   }, []);
 
   useEffect(() => {
-    // This effect runs when the component unmounts.
-    // It's a good place to clean up any temporary blob URLs.
     return () => {
       if (mediaPreview && mediaPreview.startsWith('blob:')) {
         URL.revokeObjectURL(mediaPreview);
@@ -176,17 +173,11 @@ export default function HomePageClient() {
         URL.revokeObjectURL(rawImageForCrop);
       }
     };
-  }, []);
+  }, [mediaPreview, rawImageForCrop]);
 
   useEffect(() => {
     if (pageState === 'idle') {
-      // Don't save blob URLs to localStorage
-      if (mediaPreview && mediaPreview.startsWith('blob:')) {
-        const dataToSave = { angerText, audioUrl, mediaPreview: null, timestamp: Date.now() };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
-      } else {
-        saveDataToLocalStorage();
-      }
+      saveDataToLocalStorage();
     }
   }, [angerText, mediaPreview, audioUrl, pageState, saveDataToLocalStorage]);
 
@@ -208,25 +199,38 @@ export default function HomePageClient() {
     if (file) {
       handleFile(file);
     }
-    // Reset file input to allow re-uploading the same file
     event.target.value = '';
   };
   
-  const handleImageSave = useCallback(async (image: string | null) => {
+  const handleImageSave = useCallback(async (imageBlob: Blob | null) => {
     setIsCropDialogOpen(false);
     
-    // Clean up old blob URL if it exists
     if (mediaPreview && mediaPreview.startsWith('blob:')) {
       URL.revokeObjectURL(mediaPreview);
     }
     
-    if (rawImageForCrop && rawImageForCrop.startsWith('blob:')) {
+    if (rawImageForCrop) {
       URL.revokeObjectURL(rawImageForCrop);
+      setRawImageForCrop(null);
     }
-    setRawImageForCrop(null);
 
-    setMediaPreview(image);
-  }, [mediaPreview, rawImageForCrop]);
+    if (imageBlob) {
+      try {
+        const base64data = await blobToBase64(imageBlob);
+        setMediaPreview(base64data);
+      } catch (error) {
+        console.error("Error converting blob to base64:", error);
+        toast({
+          variant: 'destructive',
+          title: 'Error processing image',
+          description: 'Could not display the cropped image.',
+        });
+        setMediaPreview(null);
+      }
+    } else {
+      setMediaPreview(null);
+    }
+  }, [mediaPreview, rawImageForCrop, toast]);
 
   const handleCropDialogClose = () => {
     setIsCropDialogOpen(false);
@@ -258,7 +262,7 @@ export default function HomePageClient() {
         reader.onloadend = () => {
             const base64Audio = reader.result as string;
             setAudioUrl(base64Audio);
-            setAudioKey(Date.now()); // Force re-render of audio element
+            setAudioKey(Date.now());
         };
         reader.readAsDataURL(audioBlob);
         setRecordingState('recorded');

@@ -19,7 +19,7 @@ type ImageCropDialogProps = {
   isOpen: boolean;
   onClose: () => void;
   imageSrc: string;
-  onSave: (newImage: string | null) => void;
+  onSave: (croppedImageBlob: Blob | null) => void;
 };
 
 export default function ImageCropDialog({ isOpen, onClose, imageSrc, onSave }: ImageCropDialogProps) {
@@ -36,12 +36,7 @@ export default function ImageCropDialog({ isOpen, onClose, imageSrc, onSave }: I
     if (croppedAreaPixels) {
         try {
             const croppedImageBlob = await getCroppedImg(imageSrc, croppedAreaPixels);
-            if (croppedImageBlob) {
-                const blobUrl = URL.createObjectURL(croppedImageBlob);
-                onSave(blobUrl);
-            } else {
-                onSave(null);
-            }
+            onSave(croppedImageBlob);
           } catch (e) {
             console.error(e);
             toast({
@@ -54,8 +49,20 @@ export default function ImageCropDialog({ isOpen, onClose, imageSrc, onSave }: I
     }
   };
 
-  const handleUseFullImage = () => {
-     onSave(imageSrc);
+  const handleUseFullImage = async () => {
+    try {
+      const response = await fetch(imageSrc);
+      const blob = await response.blob();
+      onSave(blob);
+    } catch(e) {
+      console.error(e);
+      toast({
+        variant: 'destructive',
+        title: 'Error using full image',
+        description: 'Could not process the full image. Please try cropping.',
+      });
+      onSave(null);
+    }
   };
 
   return (
