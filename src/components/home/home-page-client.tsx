@@ -342,25 +342,6 @@ export default function HomePageClient() {
     setPageState('idle');
   }
 
-  const contentVariants = {
-    initial: (left: string) => ({
-      opacity: 1, y: '-50%', x: '-50%',
-      top: '50%',
-      left,
-      scale: 1,
-      rotate: 0,
-    }),
-    flushing: {
-      opacity: 0, 
-      y: '-50%', x: '-50%',
-      top: '50%',
-      left: '50%',
-      scale: 0, 
-      rotate: 720,
-      transition: { duration: 2, ease: [0.55, 0, 1, 0.45] }
-    },
-  };
-
   const handleConfirm = () => {
     setPageState('confirming');
   }
@@ -396,26 +377,26 @@ export default function HomePageClient() {
 
   const renderMediaContent = () => {
     const imageContent = (
-      <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden">
+        <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden">
         {mediaPreview ? (
-          <div className="w-full h-full relative group">
+            <div className="w-full h-full relative group">
             <Image src={mediaPreview} alt="Anger media preview" layout="fill" className="object-cover rounded-md" />
             {pageState === 'idle' && (
-              <div className="absolute top-2 right-2 z-10">
+                <div className="absolute top-2 right-2 z-10">
                 <Button size="icon" variant="destructive" onClick={handleDiscardImage} className="rounded-full h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <X className="h-4 w-4" />
-                  <span className="sr-only">Discard Image</span>
+                    <X className="h-4 w-4" />
+                    <span className="sr-only">Discard Image</span>
                 </Button>
-              </div>
+                </div>
             )}
-          </div>
+            </div>
         ) : (
-          <div className="text-center text-muted-foreground flex flex-col items-center justify-center h-full">
+            <div className="text-center text-muted-foreground flex flex-col items-center justify-center h-full">
             <ImageIcon className="mx-auto h-12 w-12" />
             <p className="mt-2">Upload or paste an image.</p>
-          </div>
+            </div>
         )}
-      </div>
+        </div>
     );
   
     const audioContent = recordingState === 'recording' ? (
@@ -474,7 +455,18 @@ export default function HomePageClient() {
     const audioContent = audioUrl ? (
       <div className="border-t pt-4 mt-4 flex flex-col gap-2 w-full justify-center items-center">
         <p className="text-sm text-center text-muted-foreground">Your recording is ready.</p>
-        <audio controls controlsList="nodownload" src={audioUrl} className="w-full" />
+        <div className="flex items-center justify-center gap-2">
+            <Button onClick={toggleAudioPlayback} size="sm" variant="outline">
+              {isAudioPlaying ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
+              {isAudioPlaying ? 'Pause' : 'Listen'}
+            </Button>
+        </div>
+        <audio
+            key={`confirm-${audioKey}`}
+            ref={audioRef}
+            src={audioUrl}
+            className="hidden"
+          />
       </div>
     ) : (
         <div className="border-t pt-4 mt-4 text-center text-muted-foreground flex flex-col items-center justify-center w-full">
@@ -655,25 +647,6 @@ export default function HomePageClient() {
   );
 
   const renderFlushingState = () => {
-    const flushingContentVariants = {
-        initial: (left: string) => ({
-          opacity: 1, y: '-50%', x: '-50%',
-          top: '30%',
-          left,
-          scale: 1,
-          rotate: 0,
-        }),
-        flushing: {
-          opacity: 0, 
-          y: '-50%', x: '-50%',
-          top: '50%',
-          left: '50%',
-          scale: 0, 
-          rotate: 720,
-          transition: { duration: 2, ease: [0.55, 0, 1, 0.45] }
-        },
-      };
-
     return (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/80">
           <div className="relative w-[300px] h-[300px] sm:w-[400px] sm:h-[400px]">
@@ -687,17 +660,27 @@ export default function HomePageClient() {
                 unoptimized
               />
             )}
-            <div className="absolute inset-0">
+            <div className="absolute inset-0 flex items-center justify-center">
               {mediaPreview && (
                 <motion.div
-                  className="w-32 sm:w-40 absolute"
-                  custom={'50%'}
-                  initial="initial"
-                  animate="flushing"
-                  variants={flushingContentVariants}
+                  className="w-32 sm:w-40"
+                  animate={{
+                    y: ["-50%", "0%", "0%"],
+                    x: ["-50%", "-50%", "-50%"],
+                    top: ["-20%", "50%", "50%"],
+                    left: "50%",
+                    scale: [1, 0.5, 0],
+                    rotate: [0, 0, 720],
+                    opacity: [1, 1, 0]
+                  }}
+                  transition={{
+                    duration: 2.5,
+                    ease: "easeInOut",
+                    times: [0, 0.4, 1]
+                  }}
                 >
                   <Card>
-                    <CardContent className="h-20 sm:h-24 p-1">
+                    <CardContent className="h-20 sm:h-24 p-1 rounded-md overflow-hidden">
                       <div className="relative w-full h-full">
                           <Image
                             src={mediaPreview}
