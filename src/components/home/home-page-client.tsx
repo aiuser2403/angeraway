@@ -367,13 +367,15 @@ export default function HomePageClient() {
               </div>
           </div>
           <p className="text-lg mt-4 mb-4">Your recording is ready.</p>
-           {pageState === 'idle' && !isFlushing && (
+           {(pageState === 'idle' || pageState === 'confirming') && !isFlushing && (
               <div className="border-t pt-4 flex flex-col gap-4 w-full">
                   {audioUrl && <audio key={audioKey} controls src={audioUrl} className="w-full" />}
-                  <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Discard
-                  </Button>
+                  {pageState === 'idle' &&
+                    <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Discard
+                    </Button>
+                  }
               </div>
           )}
           {isFlushing && audioUrl && <audio key={audioKey} src={audioUrl} className="w-full" controls disabled />}
@@ -657,5 +659,7 @@ export default function HomePageClient() {
     </div>
   );
 }
+
+    
 
     
