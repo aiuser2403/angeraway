@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Image as ImageIcon, Mic, FileText, Trash2, X, Square } from 'lucide-react';
+import { Image as ImageIcon, Mic, FileText, Trash2, X, Square, Play, Pause } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import ImageCropDialog from './image-crop-dialog';
@@ -14,6 +14,7 @@ import PleasantSmileyIcon from '@/components/icons/pleasant-smiley-icon';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import ToiletIcon from '../icons/toilet-icon';
 import { blobToBase64 } from '@/lib/image-utils';
+import { Progress } from '@/components/ui/progress';
 
 type PageState = 'idle' | 'confirming' | 'flushing' | 'flushed';
 type RecordingState = 'idle' | 'recording' | 'recorded' | 'denied';
@@ -31,6 +32,12 @@ type StoredData = {
   timestamp: number;
 };
 
+function formatTime(seconds: number) {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+}
+
 export default function HomePageClient() {
   const [angerText, setAngerText] = useState('');
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
@@ -39,12 +46,16 @@ export default function HomePageClient() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [pageState, setPageState] = useState<PageState>('idle');
   const [rawImageForCrop, setRawImageForCrop] = useState<string | null>(null);
-  const [audioKey, setAudioKey] = useState<number>(Date.now());
+
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [audioDuration, setAudioDuration] = useState(0);
+  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const flushAudioRef = useRef<HTMLAudioElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   
   const { toast } = useToast();
 
@@ -56,9 +67,16 @@ export default function HomePageClient() {
 
   const saveDataToLocalStorage = useCallback(async () => {
     try {
+      let mediaToStore = mediaPreview;
+      if (mediaPreview && mediaPreview.startsWith('blob:')) {
+        // Blobs can't be stored, so we skip storing them.
+        // The blob will be lost on refresh, but this prevents errors.
+        mediaToStore = null; 
+      }
+
       const dataToStore: StoredData = {
         angerText,
-        mediaPreview: mediaPreview,
+        mediaPreview: mediaToStore,
         audioUrl,
         timestamp: Date.now(),
       };
@@ -205,10 +223,8 @@ export default function HomePageClient() {
   const handleImageSave = useCallback(async (imageBlob: Blob | null) => {
     setIsCropDialogOpen(false);
     
-    if (mediaPreview) {
-      if (mediaPreview.startsWith('blob:')) {
-        URL.revokeObjectURL(mediaPreview);
-      }
+    if (mediaPreview && mediaPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(mediaPreview);
     }
     
     if (rawImageForCrop) {
@@ -217,8 +233,8 @@ export default function HomePageClient() {
     }
   
     if (imageBlob) {
-      const base64 = await blobToBase64(imageBlob);
-      setMediaPreview(base64);
+      const newBlobUrl = URL.createObjectURL(imageBlob);
+      setMediaPreview(newBlobUrl);
     } else {
       setMediaPreview(null);
     }
@@ -254,7 +270,6 @@ export default function HomePageClient() {
         reader.onloadend = () => {
             const base64Audio = reader.result as string;
             setAudioUrl(base64Audio);
-            setAudioKey(Date.now());
         };
         reader.readAsDataURL(audioBlob);
         setRecordingState('recorded');
@@ -292,9 +307,15 @@ export default function HomePageClient() {
   };
 
   const handleDiscardAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
     setAudioUrl(null);
     setRecordingState('idle');
     audioChunksRef.current = [];
+    setAudioDuration(0);
+    setAudioCurrentTime(0);
+    setIsAudioPlaying(false);
   }
 
   const handleDiscardImage = () => {
@@ -340,32 +361,88 @@ export default function HomePageClient() {
   const handleConfirm = () => {
     setPageState('confirming');
   }
-
   
+  const toggleAudioPlayback = () => {
+    if (!audioRef.current) return;
+    if (isAudioPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+    }
+    setIsAudioPlaying(!isAudioPlaying);
+  };
+
+  const onAudioLoaded = () => {
+    if (audioRef.current) {
+      setAudioDuration(audioRef.current.duration);
+    }
+  };
+
+  const onAudioTimeUpdate = () => {
+    if (audioRef.current) {
+      setAudioCurrentTime(audioRef.current.currentTime);
+    }
+  };
+  
+  const onAudioEnded = () => {
+    setIsAudioPlaying(false);
+    setAudioCurrentTime(0);
+  };
+
   const renderMediaContent = (isFlushing = false) => {
-    const imageContent = mediaPreview ? (
-      <div className="w-full h-full relative group">
-        <Image src={mediaPreview} alt="Anger media preview" layout="fill" className="object-contain rounded-md" />
-        {!isFlushing && pageState === 'idle' && (
-          <div className="absolute top-2 right-2 z-10">
-            <Button size="icon" variant="destructive" onClick={handleDiscardImage} className="rounded-full h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-              <X className="h-4 w-4" />
-              <span className="sr-only">Discard Image</span>
-            </Button>
+    const imageContent = (
+      <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-full">
+        {mediaPreview ? (
+          <div className="w-full h-full relative group">
+            <Image src={mediaPreview} alt="Anger media preview" layout="fill" className="object-contain rounded-md" />
+            {!isFlushing && pageState === 'idle' && (
+              <div className="absolute top-2 right-2 z-10">
+                <Button size="icon" variant="destructive" onClick={handleDiscardImage} className="rounded-full h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <X className="h-4 w-4" />
+                  <span className="sr-only">Discard Image</span>
+                </Button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-center text-muted-foreground flex flex-col items-center justify-center h-full">
+            <ImageIcon className="mx-auto h-12 w-12" />
+            <p className="mt-2">Upload or paste an image.</p>
           </div>
         )}
       </div>
-    ) : (
-      <div className="text-center text-muted-foreground flex flex-col items-center justify-center h-full">
-        <ImageIcon className="mx-auto h-12 w-12" />
-        <p className="mt-2">Upload or paste an image.</p>
-      </div>
     );
   
-    const audioContent = audioUrl ? (
-      <div className="border-t pt-4 mt-4 flex flex-col gap-4 w-full">
+    const audioContent = recordingState === 'recording' ? (
+      <div className="pt-4 flex flex-col items-center justify-center w-full">
+        <Mic className="h-10 w-10 text-red-500 animate-pulse" />
+        <p className="mt-2 text-lg">Recording...</p>
+      </div>
+    ) : audioUrl ? (
+      <div className="pt-4 flex flex-col gap-2 w-full">
         <p className="text-sm text-center text-muted-foreground">Your recording is ready.</p>
-        <audio key={audioKey} controls controlsList="nodownload" src={audioUrl} className="w-full" />
+         <div className="flex items-center gap-2">
+            <Button onClick={toggleAudioPlayback} size="icon" variant="ghost">
+              {isAudioPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+            </Button>
+            <div className="flex-grow flex items-center gap-2">
+              <Progress value={audioDuration > 0 ? (audioCurrentTime / audioDuration) * 100 : 0} className="h-2" />
+              <span className="text-xs text-muted-foreground font-mono">
+                {formatTime(audioCurrentTime)} / {formatTime(audioDuration)}
+              </span>
+            </div>
+        </div>
+
+        {/* Hidden audio element for control */}
+        <audio
+          ref={audioRef}
+          src={audioUrl}
+          onLoadedMetadata={onAudioLoaded}
+          onTimeUpdate={onAudioTimeUpdate}
+          onEnded={onAudioEnded}
+          className="hidden"
+        />
+
         {!isFlushing && pageState === 'idle' && (
             <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
                 <Trash2 className="mr-2 h-4 w-4" />
@@ -373,19 +450,18 @@ export default function HomePageClient() {
             </Button>
         )}
       </div>
-    ) : recordingState === 'recording' ? (
-      <div className="border-t pt-4 mt-4 flex flex-col items-center justify-center w-full">
-        <Mic className="h-10 w-10 text-red-500 animate-pulse" />
-        <p className="mt-2 text-lg">Recording...</p>
-      </div>
     ) : null;
   
     return (
-      <div className="flex flex-col h-full">
-        <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-full">
+      <div className="flex flex-col h-full justify-between">
+        <div className="flex-grow h-full flex flex-col">
           {imageContent}
         </div>
-        {audioContent}
+        {(audioContent || recordingState === 'recording') && (
+            <div className="border-t mt-4">
+                {audioContent}
+            </div>
+        )}
       </div>
     );
   };
@@ -404,8 +480,8 @@ export default function HomePageClient() {
   
     const audioContent = audioUrl ? (
         <div className="border-t pt-4 mt-4 flex flex-col gap-4 w-full">
-            <p className="text-sm text-center text-muted-foreground">Your recording is ready.</p>
-            <audio key={audioKey} controls controlsList="nodownload" src={audioUrl} className="w-full" />
+            <p className="text-sm text-center text-muted-foreground">Your recording.</p>
+            <audio controls controlsList="nodownload" src={audioUrl} className="w-full" />
         </div>
     ) : (
         <div className="border-t pt-4 mt-4 text-center text-muted-foreground flex flex-col items-center justify-center w-full">
@@ -419,7 +495,11 @@ export default function HomePageClient() {
         <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-full">
           {imageContent}
         </div>
-        {audioContent}
+         {(audioUrl) && (
+            <div className="border-t mt-4">
+                {audioContent}
+            </div>
+        )}
       </div>
     );
   };
@@ -679,3 +759,5 @@ export default function HomePageClient() {
     </div>
   );
 }
+
+    
