@@ -21,13 +21,6 @@ type RecordingState = 'idle' | 'recording' | 'recorded' | 'denied';
 const MAX_FILE_SIZE_MB = 100;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 const SUPPORTED_IMAGE_FORMATS = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
-const STORAGE_KEY = 'anger-away-data';
-
-type StoredData = {
-  angerText: string;
-  mediaPreview: string | null;
-  audioUrl: string | null;
-};
 
 export default function HomePageClient() {
   const [angerText, setAngerText] = useState('');
@@ -54,20 +47,6 @@ export default function HomePageClient() {
   }, [angerText, mediaPreview, audioUrl]);
 
   const toiletImage = PlaceHolderImages.find(img => img.id === 'toilet-background');
-
-  const saveDataToLocalStorage = useCallback(() => {
-    try {
-      const data: StoredData = {
-        angerText,
-        mediaPreview,
-        audioUrl,
-      };
-      
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    } catch (error) {
-      console.error("Error saving to session storage:", error);
-    }
-  }, [angerText, mediaPreview, audioUrl]);
   
   const handleFile = (file: File) => {
     if (file.size > MAX_FILE_SIZE_BYTES) {
@@ -140,23 +119,6 @@ export default function HomePageClient() {
     };
   }, [handlePaste]);
 
-  useEffect(() => {
-    try {
-      const storedDataString = sessionStorage.getItem(STORAGE_KEY);
-      if (storedDataString) {
-        const storedData: StoredData = JSON.parse(storedDataString);
-        setAngerText(storedData.angerText || '');
-        setMediaPreview(storedData.mediaPreview || null);
-        if (storedData.audioUrl) {
-            setAudioUrl(storedData.audioUrl);
-            setRecordingState('recorded');
-        }
-      }
-    } catch (error) {
-      console.error("Error loading from session storage:", error);
-      sessionStorage.removeItem(STORAGE_KEY);
-    }
-  }, []);
 
   useEffect(() => {
     return () => {
@@ -168,12 +130,6 @@ export default function HomePageClient() {
       }
     };
   }, [mediaPreview, rawImageForCrop]);
-
-  useEffect(() => {
-    if (pageState === 'idle') {
-      saveDataToLocalStorage();
-    }
-  }, [angerText, mediaPreview, audioUrl, pageState, saveDataToLocalStorage]);
 
   useEffect(() => {
     const audio = new Audio('https://firebasestorage.googleapis.com/v0/b/prototyper-de2a8.appspot.com/o/public%2Ftoilet-flush-sound.mp3?alt=media&token=86a761ad-c841-499c-88e2-8874135d518d');
@@ -316,12 +272,6 @@ export default function HomePageClient() {
       setAngerText('');
       handleDiscardImage();
       handleDiscardAudio();
-
-      try {
-        sessionStorage.removeItem(STORAGE_KEY);
-      } catch (error) {
-        console.error("Error removing from session storage:", error);
-      }
     }, 5000);
   };
 
@@ -646,12 +596,11 @@ export default function HomePageClient() {
       animate: {
         x: '0%',
         y: '0%',
-        scale: [1, 0.5, 0],
-        rotate: [0, 360, 1080],
+        scale: 0,
+        rotate: 1080,
         transition: {
-          duration: 2.5,
+          duration: 4.5,
           ease: 'circIn',
-          times: [0, 0.5, 1],
         },
       },
     });
@@ -760,8 +709,5 @@ export default function HomePageClient() {
     </div>
   );
 }
-
-    
-    
 
     
