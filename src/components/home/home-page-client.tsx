@@ -13,7 +13,6 @@ import ImageCropDialog from './image-crop-dialog';
 import PleasantSmileyIcon from '@/components/icons/pleasant-smiley-icon';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import ToiletIcon from '../icons/toilet-icon';
-import { blobToBase64 } from '@/lib/image-utils';
 
 type PageState = 'idle' | 'confirming' | 'flushing' | 'flushed';
 type RecordingState = 'idle' | 'recording' | 'recorded' | 'denied';
@@ -58,9 +57,14 @@ export default function HomePageClient() {
     try {
       const data: Partial<StoredData> = {
         angerText,
-        mediaPreview,
         audioUrl,
       };
+      // Only save mediaPreview if it's a data URL (pasted image), not a temporary blob URL
+      if (mediaPreview && mediaPreview.startsWith('data:')) {
+        data.mediaPreview = mediaPreview;
+      } else {
+        data.mediaPreview = null;
+      }
       const dataToStore = { ...data, timestamp: Date.now() };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToStore));
     } catch (error) {
@@ -188,11 +192,20 @@ export default function HomePageClient() {
   
   // Cleanup blob URLs
   useEffect(() => {
-    let rawImage = rawImageForCrop;
+    const currentMediaPreview = mediaPreview;
     return () => {
-      if (rawImage && rawImage.startsWith('blob:')) {
-        URL.revokeObjectURL(rawImage);
+      if (currentMediaPreview && currentMediaPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(currentMediaPreview);
       }
+    }
+  }, [mediaPreview]);
+
+  useEffect(() => {
+    const currentRawImageForCrop = rawImageForCrop;
+    return () => {
+        if (currentRawImageForCrop && currentRawImageForCrop.startsWith('blob:')) {
+            URL.revokeObjectURL(currentRawImageForCrop);
+        }
     }
   }, [rawImageForCrop]);
 
@@ -203,48 +216,17 @@ export default function HomePageClient() {
     }
   };
   
-  const handleImageSave = async (blobUrl: string | null) => {
-    // Revoke previous blob url if it exists
-    if (mediaPreview && mediaPreview.startsWith('blob:')) {
-      URL.revokeObjectURL(mediaPreview);
-    }
-  
+  const handleImageSave = (newBlobUrl: string | null) => {
     setIsCropDialogOpen(false);
-  
-    if (blobUrl) {
-      // Convert blob URL to a more permanent base64 data URL before revoking
-      try {
-        const base64 = await blobToBase64(blobUrl);
-        setMediaPreview(base64);
-      } catch (error) {
-        console.error("Failed to convert blob to base64:", error);
-        setMediaPreview(null);
-        toast({
-          variant: 'destructive',
-          title: 'Error processing image',
-          description: 'Could not display the cropped image.'
-        });
-      } finally {
-        // Clean up the temporary blob URL
-        URL.revokeObjectURL(blobUrl);
-      }
-    } else {
-      setMediaPreview(null);
-    }
+    setMediaPreview(newBlobUrl); // This will be a blob URL
     
-    // Cleanup for the raw image passed to the cropper
-    if (rawImageForCrop && rawImageForCrop.startsWith('blob:')) {
-      URL.revokeObjectURL(rawImageForCrop);
-    }
+    // Clean up the raw image passed to the cropper
     setRawImageForCrop(null);
   };
 
   const handleCropDialogClose = () => {
     setIsCropDialogOpen(false);
-    if (rawImageForCrop && rawImageForCrop.startsWith('blob:')) {
-      URL.revokeObjectURL(rawImageForCrop);
-    }
-    setRawImageForCrop(null);
+    setRawImageForCrop(null); // This will trigger the cleanup useEffect
     if(fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -313,9 +295,6 @@ export default function HomePageClient() {
   }
 
   const handleDiscardImage = () => {
-    if (mediaPreview && mediaPreview.startsWith('blob:')) {
-      URL.revokeObjectURL(mediaPreview);
-    }
     setMediaPreview(null);
     if(fileInputRef.current) {
       fileInputRef.current.value = '';
