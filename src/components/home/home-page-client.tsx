@@ -59,16 +59,15 @@ export default function HomePageClient() {
 
   const saveDataToLocalStorage = useCallback(async () => {
     try {
+      const storedDataString = localStorage.getItem(STORAGE_KEY);
+      const existingData = storedDataString ? JSON.parse(storedDataString) : {};
+
       const data: StoredData = {
         angerText,
-        mediaPreview: null, // Blobs can't be stringified
+        mediaPreview: mediaPreview && !mediaPreview.startsWith('blob:') ? mediaPreview : existingData.mediaPreview,
         audioUrl,
         timestamp: Date.now(),
       };
-
-      if (mediaPreview && !mediaPreview.startsWith('blob:')) {
-        data.mediaPreview = mediaPreview;
-      }
       
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch (error) {
@@ -223,23 +222,24 @@ export default function HomePageClient() {
     }
   
     if (imageBlob) {
-      // Create a blob URL for immediate display
       const blobUrl = URL.createObjectURL(imageBlob);
       setMediaPreview(blobUrl);
 
-      // Convert to base64 for local storage persistence
       const base64 = await blobToBase64(imageBlob);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'),
-        mediaPreview: base64,
-        timestamp: Date.now(),
-      }));
+      const storedDataString = localStorage.getItem(STORAGE_KEY);
+      const storedData = storedDataString ? JSON.parse(storedDataString) : {};
+      storedData.mediaPreview = base64;
+      storedData.timestamp = Date.now();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(storedData));
 
     } else {
       setMediaPreview(null);
-      const storedData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-      delete storedData.mediaPreview;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(storedData));
+      const storedDataString = localStorage.getItem(STORAGE_KEY);
+      if (storedDataString) {
+        const storedData = JSON.parse(storedDataString);
+        delete storedData.mediaPreview;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(storedData));
+      }
     }
   }, [mediaPreview, rawImageForCrop]);
 
@@ -373,10 +373,6 @@ export default function HomePageClient() {
     }
   };
 
-  const onAudioEnded = () => {
-    setIsAudioPlaying(false);
-  };
-
   useEffect(() => {
     const audio = audioRef.current;
     if (audio) {
@@ -399,7 +395,7 @@ export default function HomePageClient() {
 
   const renderMediaContent = (isFlushing = false) => {
     const imageContent = (
-      <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-[75%]">
+      <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden">
         {mediaPreview ? (
           <div className="w-full h-full relative group">
             <Image src={mediaPreview} alt="Anger media preview" layout="fill" className="object-cover rounded-md" />
@@ -427,7 +423,7 @@ export default function HomePageClient() {
         <p className="mt-2 text-lg">Recording...</p>
       </div>
     ) : audioUrl ? (
-      <div className="pt-4 flex flex-col gap-2 w-full">
+      <div className="border-t mt-4 pt-4 flex flex-col gap-2 w-full">
          <div className="flex items-center justify-center gap-2">
             <Button onClick={toggleAudioPlayback} size="sm" variant="outline">
               {isAudioPlaying ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
@@ -444,7 +440,6 @@ export default function HomePageClient() {
             key={audioKey}
             ref={audioRef}
             src={audioUrl}
-            onEnded={onAudioEnded}
             className="hidden"
           />
         )}
@@ -453,35 +448,35 @@ export default function HomePageClient() {
   
     return (
       <div className="flex flex-col h-full justify-between">
-        <div className="h-full flex flex-col">
-          {imageContent}
-          <div className="border-t mt-4 flex-grow h-[25%] flex items-center justify-center">
-            {audioContent}
+        {imageContent}
+        {audioContent && (
+          <div className="flex-shrink-0 flex items-center justify-center">
+              {audioContent}
           </div>
-        </div>
+        )}
       </div>
     );
   };
   
   const renderConfirmMediaContent = () => {
     const imageContent = mediaPreview ? (
-        <div className="w-full h-[75%] relative group">
+        <div className="w-full h-full relative group">
           <Image src={mediaPreview} alt="Anger media preview" layout="fill" className="object-cover rounded-md" />
         </div>
     ) : (
-      <div className="text-center text-muted-foreground flex flex-col items-center justify-center h-[75%]">
+      <div className="text-center text-muted-foreground flex flex-col items-center justify-center h-full">
         <ImageIcon className="mx-auto h-12 w-12" />
         <p className="mt-2">No image was uploaded.</p>
       </div>
     );
   
     const audioContent = audioUrl ? (
-      <div className="border-t pt-4 mt-4 flex flex-col gap-2 w-full h-[25%] justify-center">
+      <div className="border-t pt-4 mt-4 flex flex-col gap-2 w-full justify-center">
           <p className="text-sm text-center text-muted-foreground">Your recording.</p>
           <audio controls controlsList="nodownload" src={audioUrl} className="w-full" />
       </div>
     ) : (
-        <div className="border-t pt-4 mt-4 text-center text-muted-foreground flex flex-col items-center justify-center w-full h-[25%]">
+        <div className="border-t pt-4 mt-4 text-center text-muted-foreground flex flex-col items-center justify-center w-full">
             <Mic className="h-10 w-10" />
             <p className="mt-2">No recording was made.</p>
         </div>
@@ -489,8 +484,12 @@ export default function HomePageClient() {
   
     return (
       <div className="flex flex-col h-full border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden">
-        {imageContent}
-        {audioContent}
+        <div className="flex-grow">
+            {imageContent}
+        </div>
+        <div className="flex-shrink-0">
+            {audioContent}
+        </div>
       </div>
     );
   };
@@ -527,15 +526,15 @@ export default function HomePageClient() {
                 </CardContent>
             </Card>
             
-            <Card className="shadow-lg transform hover:scale-[1.02] transition-transform duration-300">
+            <Card className="shadow-lg transform hover:scale-[1.02] transition-transform duration-300 flex flex-col">
                 <CardHeader>
                 <CardTitle className="flex items-center gap-2 font-headline">
                     <Mic className="text-accent" />
                     Upload or Record
                 </CardTitle>
                 </CardHeader>
-                <CardContent>
-                <div className="flex flex-col h-full justify-between min-h-[500px]">
+                <CardContent className="flex flex-col flex-grow">
+                <div className="flex flex-col flex-grow justify-between min-h-[500px]">
                     <div className="flex-grow h-full">
                       {renderMediaContent()}
                     </div>
@@ -625,14 +624,14 @@ export default function HomePageClient() {
                 </CardContent>
             </Card>
             
-            <Card>
+            <Card className="flex flex-col">
                 <CardHeader>
                 <CardTitle className="flex items-center gap-2 font-headline">
                     <Mic className="text-accent" />
                     Your Media
                 </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex-grow">
                 <div className="flex flex-col h-full justify-between min-h-[500px]">
                     {renderConfirmMediaContent()}
                 </div>
@@ -750,5 +749,3 @@ export default function HomePageClient() {
     </div>
   );
 }
-
-    
