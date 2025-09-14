@@ -32,12 +32,6 @@ type StoredData = {
   timestamp: number;
 };
 
-function formatTime(seconds: number) {
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = Math.floor(seconds % 60);
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-}
-
 export default function HomePageClient() {
   const [angerText, setAngerText] = useState('');
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
@@ -48,8 +42,7 @@ export default function HomePageClient() {
   const [rawImageForCrop, setRawImageForCrop] = useState<string | null>(null);
 
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
-  const [audioDuration, setAudioDuration] = useState(0);
-  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
+  const [audioKey, setAudioKey] = useState(0);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -67,16 +60,9 @@ export default function HomePageClient() {
 
   const saveDataToLocalStorage = useCallback(async () => {
     try {
-      let mediaToStore = mediaPreview;
-      if (mediaPreview && mediaPreview.startsWith('blob:')) {
-        // Blobs can't be stored, so we skip storing them.
-        // The blob will be lost on refresh, but this prevents errors.
-        mediaToStore = null; 
-      }
-
       const dataToStore: StoredData = {
         angerText,
-        mediaPreview: mediaToStore,
+        mediaPreview,
         audioUrl,
         timestamp: Date.now(),
       };
@@ -233,8 +219,8 @@ export default function HomePageClient() {
     }
   
     if (imageBlob) {
-      const newBlobUrl = URL.createObjectURL(imageBlob);
-      setMediaPreview(newBlobUrl);
+      const base64 = await blobToBase64(imageBlob);
+      setMediaPreview(base64);
     } else {
       setMediaPreview(null);
     }
@@ -270,6 +256,7 @@ export default function HomePageClient() {
         reader.onloadend = () => {
             const base64Audio = reader.result as string;
             setAudioUrl(base64Audio);
+            setAudioKey(prev => prev + 1);
         };
         reader.readAsDataURL(audioBlob);
         setRecordingState('recorded');
@@ -313,8 +300,6 @@ export default function HomePageClient() {
     setAudioUrl(null);
     setRecordingState('idle');
     audioChunksRef.current = [];
-    setAudioDuration(0);
-    setAudioCurrentTime(0);
     setIsAudioPlaying(false);
   }
 
@@ -371,22 +356,9 @@ export default function HomePageClient() {
     }
     setIsAudioPlaying(!isAudioPlaying);
   };
-
-  const onAudioLoaded = () => {
-    if (audioRef.current) {
-      setAudioDuration(audioRef.current.duration);
-    }
-  };
-
-  const onAudioTimeUpdate = () => {
-    if (audioRef.current) {
-      setAudioCurrentTime(audioRef.current.currentTime);
-    }
-  };
   
   const onAudioEnded = () => {
     setIsAudioPlaying(false);
-    setAudioCurrentTime(0);
   };
 
   const renderMediaContent = (isFlushing = false) => {
@@ -394,7 +366,7 @@ export default function HomePageClient() {
       <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-full">
         {mediaPreview ? (
           <div className="w-full h-full relative group">
-            <Image src={mediaPreview} alt="Anger media preview" layout="fill" className="object-contain rounded-md" />
+            <Image src={mediaPreview} alt="Anger media preview" layout="fill" className="object-cover rounded-md" />
             {!isFlushing && pageState === 'idle' && (
               <div className="absolute top-2 right-2 z-10">
                 <Button size="icon" variant="destructive" onClick={handleDiscardImage} className="rounded-full h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -420,34 +392,27 @@ export default function HomePageClient() {
       </div>
     ) : audioUrl ? (
       <div className="pt-4 flex flex-col gap-2 w-full">
-        <p className="text-sm text-center text-muted-foreground">Your recording is ready.</p>
-         <div className="flex items-center gap-2">
-            <Button onClick={toggleAudioPlayback} size="icon" variant="ghost">
-              {isAudioPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+         <div className="flex items-center justify-center gap-2">
+            <Button onClick={toggleAudioPlayback} size="sm" variant="outline">
+              {isAudioPlaying ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
+              {isAudioPlaying ? 'Pause' : 'Listen'}
             </Button>
-            <div className="flex-grow flex items-center gap-2">
-              <Progress value={audioDuration > 0 ? (audioCurrentTime / audioDuration) * 100 : 0} className="h-2" />
-              <span className="text-xs text-muted-foreground font-mono">
-                {formatTime(audioCurrentTime)} / {formatTime(audioDuration)}
-              </span>
-            </div>
+            <Button onClick={handleDiscardAudio} size="sm" variant="outline" className="text-destructive hover:text-destructive">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Discard
+            </Button>
         </div>
 
-        {/* Hidden audio element for control */}
-        <audio
-          ref={audioRef}
-          src={audioUrl}
-          onLoadedMetadata={onAudioLoaded}
-          onTimeUpdate={onAudioTimeUpdate}
-          onEnded={onAudioEnded}
-          className="hidden"
-        />
-
-        {!isFlushing && pageState === 'idle' && (
-            <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Discard Recording
-            </Button>
+        {audioUrl && (
+          <audio
+            key={audioKey}
+            ref={audioRef}
+            src={audioUrl}
+            onPlay={() => setIsAudioPlaying(true)}
+            onPause={() => setIsAudioPlaying(false)}
+            onEnded={onAudioEnded}
+            className="hidden"
+          />
         )}
       </div>
     ) : null;
@@ -469,7 +434,7 @@ export default function HomePageClient() {
   const renderConfirmMediaContent = () => {
     const imageContent = mediaPreview ? (
         <div className="w-full h-full relative group">
-          <Image src={mediaPreview} alt="Anger media preview" layout="fill" className="object-contain rounded-md" />
+          <Image src={mediaPreview} alt="Anger media preview" layout="fill" className="object-cover rounded-md" />
         </div>
     ) : (
       <div className="text-center text-muted-foreground flex flex-col items-center justify-center h-full">
@@ -759,5 +724,3 @@ export default function HomePageClient() {
     </div>
   );
 }
-
-    
