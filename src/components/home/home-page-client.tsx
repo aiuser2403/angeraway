@@ -648,30 +648,36 @@ export default function HomePageClient() {
 
   const renderFlushingState = () => {
     return (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/80">
-          <div className="relative w-[300px] h-[300px] sm:w-[400px] sm:h-[400px]">
-            {toiletImage && (
-              <Image
-                src={toiletImage.imageUrl}
-                alt={toiletImage.description}
-                layout="fill"
-                className="object-contain rounded-full overflow-hidden"
-                data-ai-hint={toiletImage.imageHint}
-                unoptimized
-              />
-            )}
-            <div className="absolute inset-0 flex items-center justify-center">
+        <div className="fixed inset-0 z-50">
+          {toiletImage && (
+            <Image
+              src={toiletImage.imageUrl}
+              alt={toiletImage.description}
+              layout="fill"
+              className="object-cover"
+              data-ai-hint={toiletImage.imageHint}
+              unoptimized
+            />
+          )}
+          <div className="absolute inset-0 bg-black/30" />
+          <div className="relative w-full h-full flex items-center justify-center">
               {mediaPreview && (
                 <motion.div
-                  className="w-32 sm:w-40"
-                  animate={{
-                    y: ["-50%", "0%", "0%"],
-                    x: ["-50%", "-50%", "-50%"],
-                    top: ["-20%", "50%", "50%"],
+                  className="w-40 sm:w-60 absolute"
+                  initial={{
+                    y: "-200%",
+                    x: "-50%",
                     left: "50%",
-                    scale: [1, 0.5, 0],
-                    rotate: [0, 0, 720],
-                    opacity: [1, 1, 0]
+                    scale: 1.5,
+                    rotate: 0,
+                  }}
+                  animate={{
+                    scale: [1.5, 0.8, 0],
+                    rotate: [0, -30, 720],
+                    y: ["-200%", "0%", "50%"],
+                    x: ["-50%", "-50%", "-50%"],
+                    left: "50%",
+                    top: "50%",
                   }}
                   transition={{
                     duration: 2.5,
@@ -680,12 +686,12 @@ export default function HomePageClient() {
                   }}
                 >
                   <Card>
-                    <CardContent className="h-20 sm:h-24 p-1 rounded-md overflow-hidden">
+                    <CardContent className="h-32 sm:h-48 p-1 rounded-md overflow-hidden">
                       <div className="relative w-full h-full">
                           <Image
                             src={mediaPreview}
                             layout="fill"
-                            className="object-cover rounded"
+                            className="object-cover rounded-md"
                             alt="anger media"
                           />
                       </div>
@@ -693,7 +699,6 @@ export default function HomePageClient() {
                   </Card>
                 </motion.div>
               )}
-            </div>
           </div>
         </div>
       );
