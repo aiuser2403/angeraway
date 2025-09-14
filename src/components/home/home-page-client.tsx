@@ -449,7 +449,7 @@ export default function HomePageClient() {
   
     return (
       <div className="flex flex-col h-full justify-between">
-        {imageContent}
+        <div className="flex-grow flex flex-col">{imageContent}</div>
         {audioContent && (
           <div className="flex-shrink-0 flex items-center justify-center">
               {audioContent}
@@ -472,10 +472,10 @@ export default function HomePageClient() {
     );
   
     const audioContent = audioUrl ? (
-        <div className="border-t pt-4 mt-4 flex flex-col gap-2 w-full justify-center items-center">
-            <p className="text-sm text-center text-muted-foreground">Your recording is ready.</p>
-            <audio controls controlsList="nodownload" src={audioUrl} className="w-full" />
-        </div>
+      <div className="border-t pt-4 mt-4 flex flex-col gap-2 w-full justify-center items-center">
+        <p className="text-sm text-center text-muted-foreground">Your recording is ready.</p>
+        <audio controls controlsList="nodownload" src={audioUrl} className="w-full" />
+      </div>
     ) : (
         <div className="border-t pt-4 mt-4 text-center text-muted-foreground flex flex-col items-center justify-center w-full">
             <Mic className="h-10 w-10" />
@@ -688,26 +688,6 @@ export default function HomePageClient() {
               />
             )}
             <div className="absolute inset-0">
-              {angerText && (
-                <motion.div
-                  className="w-32 sm:w-40 absolute"
-                  custom={'25%'}
-                  initial="initial"
-                  animate="flushing"
-                  variants={flushingContentVariants}
-                >
-                  <Card>
-                    <CardContent className="p-1">
-                      <Textarea
-                        readOnly
-                        value={angerText}
-                        className="h-20 sm:h-24 resize-none text-xs"
-                      />
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )}
-    
               {mediaPreview && (
                 <motion.div
                   className="w-32 sm:w-40 absolute"
@@ -726,22 +706,6 @@ export default function HomePageClient() {
                             alt="anger media"
                           />
                       </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )}
-    
-              {audioUrl && (
-                 <motion.div
-                  className="w-32 sm:w-40 absolute"
-                  custom={'75%'}
-                  initial="initial"
-                  animate="flushing"
-                  variants={flushingContentVariants}
-                >
-                  <Card>
-                    <CardContent className="h-20 sm:h-24 p-1 flex items-center justify-center">
-                        <Mic size={32} className="text-muted-foreground" />
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -784,5 +748,3 @@ export default function HomePageClient() {
     </div>
   );
 }
-
-    
