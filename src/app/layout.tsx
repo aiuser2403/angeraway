@@ -43,7 +43,7 @@ export default function RootLayout({
         </div>
         <Toaster />
         <div className="fixed bottom-4 right-4 z-50">
-          <Button asChild variant="outline">
+          <Button asChild className="bg-[#25D366] hover:bg-[#25D366]/90 text-white">
             <Link href={whatsappLink} target="_blank" rel="noopener noreferrer">
                 <MessageSquareShare className="mr-2 h-4 w-4" />
                 Refer a Friend
