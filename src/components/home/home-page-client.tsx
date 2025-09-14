@@ -22,13 +22,11 @@ const MAX_FILE_SIZE_MB = 100;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 const SUPPORTED_IMAGE_FORMATS = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
 const STORAGE_KEY = 'anger-away-data';
-const EXPIRATION_MINUTES = 30;
 
 type StoredData = {
   angerText: string;
   mediaPreview: string | null;
   audioUrl: string | null;
-  timestamp: number;
 };
 
 export default function HomePageClient() {
@@ -63,12 +61,11 @@ export default function HomePageClient() {
         angerText,
         mediaPreview,
         audioUrl,
-        timestamp: Date.now(),
       };
       
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch (error) {
-      console.error("Error saving to local storage:", error);
+      console.error("Error saving to session storage:", error);
     }
   }, [angerText, mediaPreview, audioUrl]);
   
@@ -145,26 +142,19 @@ export default function HomePageClient() {
 
   useEffect(() => {
     try {
-      const storedDataString = localStorage.getItem(STORAGE_KEY);
+      const storedDataString = sessionStorage.getItem(STORAGE_KEY);
       if (storedDataString) {
         const storedData: StoredData = JSON.parse(storedDataString);
-        const now = Date.now();
-        const thirtyMinutesInMillis = EXPIRATION_MINUTES * 60 * 1000;
-
-        if (now - storedData.timestamp < thirtyMinutesInMillis) {
-          setAngerText(storedData.angerText || '');
-          setMediaPreview(storedData.mediaPreview || null);
-          if (storedData.audioUrl) {
-              setAudioUrl(storedData.audioUrl);
-              setRecordingState('recorded');
-          }
-        } else {
-          localStorage.removeItem(STORAGE_KEY);
+        setAngerText(storedData.angerText || '');
+        setMediaPreview(storedData.mediaPreview || null);
+        if (storedData.audioUrl) {
+            setAudioUrl(storedData.audioUrl);
+            setRecordingState('recorded');
         }
       }
     } catch (error) {
-      console.error("Error loading from local storage:", error);
-      localStorage.removeItem(STORAGE_KEY);
+      console.error("Error loading from session storage:", error);
+      sessionStorage.removeItem(STORAGE_KEY);
     }
   }, []);
 
@@ -328,9 +318,9 @@ export default function HomePageClient() {
       handleDiscardAudio();
 
       try {
-        localStorage.removeItem(STORAGE_KEY);
+        sessionStorage.removeItem(STORAGE_KEY);
       } catch (error) {
-        console.error("Error removing from local storage:", error);
+        console.error("Error removing from session storage:", error);
       }
     }, 5000);
   };
@@ -760,10 +750,12 @@ export default function HomePageClient() {
         {pageState === 'flushed' && <motion.div key="flushed-container">{renderFlushedState()}</motion.div>}
       </AnimatePresence>
        <footer className="w-full mt-12 text-center text-muted-foreground text-sm">
-        <p>Disclaimer: None of your message, uploaded images or recording will be saved on this page after 30 minutes</p>
+        <p>Note: Your Messages, images and recording are not saved on this page.</p>
       </footer>
     </div>
   );
 }
+
+    
 
     
