@@ -666,16 +666,14 @@ export default function HomePageClient() {
 
     return (
         <div className="fixed inset-0 z-50 overflow-hidden">
-          {toiletImage && (
-            <Image
-              src={toiletImage.imageUrl}
-              alt={toiletImage.description}
-              layout="fill"
-              className="object-cover"
-              data-ai-hint={toiletImage.imageHint}
-              unoptimized
-            />
-          )}
+          <video
+            src="https://firebasestorage.googleapis.com/v0/b/prototyper-de2a8.appspot.com/o/public%2Ftoilet-flushing-animation.mp4?alt=media&token=2866669a-602c-45f8-8683-e19842f56b3c"
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover"
+          />
           <div className="absolute inset-0 bg-black/30" />
           <div className="relative w-full h-full flex items-center justify-center">
               {angerText && (
@@ -767,3 +765,5 @@ export default function HomePageClient() {
     </div>
   );
 }
+
+    
