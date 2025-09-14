@@ -54,11 +54,16 @@ export default function HomePageClient() {
 
   const toiletImage = PlaceHolderImages.find(img => img.id === 'toilet-background');
 
-  const saveDataToLocalStorage = useCallback(() => {
+  const saveDataToLocalStorage = useCallback(async () => {
     try {
+      let storableMediaPreview = mediaPreview;
+      if (storableMediaPreview && storableMediaPreview.startsWith('blob:')) {
+        storableMediaPreview = await blobToBase64(storableMediaPreview);
+      }
+      
       const dataToStore: StoredData = {
         angerText,
-        mediaPreview, // This will be a base64 string or null
+        mediaPreview: storableMediaPreview,
         audioUrl,
         timestamp: Date.now(),
       };
@@ -204,15 +209,21 @@ export default function HomePageClient() {
   
   const handleImageSave = useCallback(async (blobUrl: string | null) => {
     setIsCropDialogOpen(false);
+    
+    const oldMediaPreview = mediaPreview;
+    
     if (blobUrl) {
-      const base64 = await blobToBase64(blobUrl);
-      setMediaPreview(base64);
-      URL.revokeObjectURL(blobUrl); // Clean up blob URL after conversion
+      setMediaPreview(blobUrl);
     } else {
       setMediaPreview(null);
     }
+
+    if (oldMediaPreview && oldMediaPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(oldMediaPreview);
+    }
+    
     setRawImageForCrop(null);
-  }, []);
+  }, [mediaPreview]);
 
   const handleCropDialogClose = () => {
     setIsCropDialogOpen(false);
@@ -285,6 +296,9 @@ export default function HomePageClient() {
   }
 
   const handleDiscardImage = () => {
+    if (mediaPreview && mediaPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(mediaPreview);
+    }
     setMediaPreview(null);
     if(fileInputRef.current) {
       fileInputRef.current.value = '';
