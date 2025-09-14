@@ -346,10 +346,10 @@ export default function HomePageClient() {
     initial: { opacity: 1, y: 0, scale: 1, rotate: 0 },
     flushing: { 
       opacity: 0, 
-      y: 100, 
-      scale: 0.1, 
-      rotate: 360 * 2,
-      transition: { duration: 2, ease: "easeInOut" } 
+      y: 0,
+      scale: 0, 
+      rotate: 720,
+      transition: { duration: 2, ease: [0.55, 0, 1, 0.45] } // Ease-in quad
     },
   };
 
@@ -659,55 +659,54 @@ export default function HomePageClient() {
         />
       )}
       <div className="absolute inset-0 bg-black/30" />
-      <div className="relative w-full max-w-6xl mx-auto h-full p-4">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full h-full items-center">
-          <motion.div
+      <div className="relative w-full h-full flex items-center justify-center p-4">
+        {angerText && (
+            <motion.div
+            className="w-full max-w-md absolute"
+            style={{ x: '-50%', y: '-50%', left: '40%', top: '50%' }}
             initial="initial"
-            animate={angerText ? "flushing" : "initial"}
+            animate={"flushing"}
             variants={contentVariants}
-            className="w-full"
-          >
-            {angerText && (
-              <Card>
+            >
+            <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 font-headline">
+                <CardTitle className="flex items-center gap-2 font-headline text-sm">
                     <FileText className="text-accent" />
                     Your Words
-                  </CardTitle>
+                </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Textarea
+                <Textarea
                     readOnly
                     value={angerText}
-                    className="min-h-[500px] resize-none"
-                  />
+                    className="h-48 resize-none text-xs"
+                />
                 </CardContent>
-              </Card>
-            )}
-          </motion.div>
-          <motion.div
+            </Card>
+            </motion.div>
+        )}
+        
+        {(mediaPreview || audioUrl) && (
+            <motion.div
+            className="w-full max-w-md absolute"
+            style={{ x: '-50%', y: '-50%', left: '60%', top: '50%' }}
             initial="initial"
-            animate={mediaPreview || audioUrl ? "flushing" : "initial"}
+            animate={"flushing"}
             variants={contentVariants}
-            className="w-full"
-          >
-            {(mediaPreview || audioUrl) && (
-              <Card>
+            >
+            <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 font-headline">
+                <CardTitle className="flex items-center gap-2 font-headline text-sm">
                     <ImageIcon className="text-accent" />
                     Your Media
-                  </CardTitle>
+                </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col h-full justify-between min-h-[500px]">
-                      {renderConfirmMediaContent()}
-                  </div>
+                <CardContent className="h-48">
+                    {renderConfirmMediaContent()}
                 </CardContent>
-              </Card>
-            )}
-          </motion.div>
-        </div>
+            </Card>
+            </motion.div>
+        )}
       </div>
     </div>
   );
@@ -744,5 +743,7 @@ export default function HomePageClient() {
     </div>
   );
 }
+
+    
 
     
