@@ -449,7 +449,7 @@ export default function HomePageClient() {
                 </CardHeader>
                 <CardContent>
                 <Textarea
-                    placeholder="Describe why you’re angry…"
+                    placeholder="Share your Feelings . . ."
                     className="min-h-[500px] resize-none"
                     value={angerText}
                     onChange={(e) => setAngerText(e.target.value)}
