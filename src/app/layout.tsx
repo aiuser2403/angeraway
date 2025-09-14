@@ -3,6 +3,9 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import Header from '@/components/layout/header';
 import Image from 'next/image';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { MessageSquareShare } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Anger Away',
@@ -14,6 +17,9 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const referralText = encodeURIComponent("Feeling angry? This app helps you let it go. Check it out!");
+  const whatsappLink = `https://wa.me/?text=${referralText}`;
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -36,6 +42,14 @@ export default function RootLayout({
           </main>
         </div>
         <Toaster />
+        <div className="fixed bottom-4 right-4 z-50">
+          <Button asChild variant="outline">
+            <Link href={whatsappLink} target="_blank" rel="noopener noreferrer">
+                <MessageSquareShare className="mr-2 h-4 w-4" />
+                Refer a Friend
+            </Link>
+          </Button>
+        </div>
       </body>
     </html>
   );

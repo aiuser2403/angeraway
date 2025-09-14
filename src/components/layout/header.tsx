@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, ArrowLeft, MessageSquareShare } from 'lucide-react';
+import { ArrowRight, ArrowLeft } from 'lucide-react';
 
 const navLinks = [
   { href: '/still-angry', label: 'Still Angry?' },
@@ -37,9 +37,6 @@ export default function Header() {
 
   const nextLink = getNextLink();
   const backLink = getBackLink();
-
-  const referralText = encodeURIComponent("Feeling angry? This app helps you let it go. Check it out!");
-  const whatsappLink = `https://wa.me/?text=${referralText}`;
 
   return (
     <header className="py-4 px-4 sm:px-6 md:px-8 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -82,12 +79,6 @@ export default function Header() {
                 </Link>
                 </Button>
            )}
-           <Button asChild variant="outline">
-              <Link href={whatsappLink} target="_blank" rel="noopener noreferrer">
-                  <MessageSquareShare className="mr-2 h-4 w-4" />
-                  Refer a Friend
-              </Link>
-           </Button>
         </nav>
       </div>
     </header>
