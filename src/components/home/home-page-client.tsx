@@ -644,31 +644,28 @@ export default function HomePageClient() {
   );
 
   const renderFlushingState = () => {
-    const flushingContentVariants = {
-        initial: (left: string) => ({
+    const flushingContentVariants = (from: 'top-left' | 'top-right' | 'bottom-center') => ({
+        initial: {
             opacity: 1,
+            x: from === 'top-left' ? '-150%' : from === 'top-right' ? '150%' : '0%',
+            y: from.includes('top') ? '-150%' : '150%',
             scale: 1,
-            y: "-50%",
-            top: "50%",
-            left: left,
-            x: "-50%",
-            rotate: 0,
-        }),
+            rotate: Math.random() * 180 - 90,
+        },
         flushing: {
-            y: ["-50%", "0%", "50%"],
-            top: "50%",
-            scale: [1, 0.5, 0],
-            rotate: [0, -30, 720],
+            x: '0%',
+            y: '0%',
+            scale: 0,
+            rotate: 1080,
             transition: { 
                 duration: 2.5,
-                ease: "easeInOut",
-                times: [0, 0.4, 1]
+                ease: "circIn",
             },
         },
-    };
+    });
 
     return (
-        <div className="fixed inset-0 z-50">
+        <div className="fixed inset-0 z-50 overflow-hidden">
           {toiletImage && (
             <Image
               src={toiletImage.imageUrl}
@@ -680,14 +677,14 @@ export default function HomePageClient() {
             />
           )}
           <div className="absolute inset-0 bg-black/30" />
-          <div className="relative w-full h-full overflow-hidden">
+          <div className="relative w-full h-full flex items-center justify-center">
               {angerText && (
                   <motion.div
                       className="w-40 sm:w-60 absolute"
-                      custom={'25%'}
+                      custom={'top-left'}
                       initial="initial"
                       animate="flushing"
-                      variants={flushingContentVariants}
+                      variants={flushingContentVariants('top-left')}
                   >
                       <Card>
                           <CardContent className="h-32 sm:h-48 p-2 rounded-md overflow-hidden">
@@ -699,10 +696,10 @@ export default function HomePageClient() {
               {mediaPreview && (
                 <motion.div
                   className="w-40 sm:w-60 absolute"
-                  custom={'50%'}
+                  custom={'top-right'}
                   initial="initial"
                   animate="flushing"
-                  variants={flushingContentVariants}
+                  variants={flushingContentVariants('top-right')}
                 >
                   <Card>
                     <CardContent className="h-32 sm:h-48 p-1 rounded-md overflow-hidden">
@@ -721,10 +718,10 @@ export default function HomePageClient() {
               {audioUrl && (
                   <motion.div
                       className="w-40 sm:w-60 absolute"
-                      custom={'75%'}
+                      custom={'bottom-center'}
                       initial="initial"
                       animate="flushing"
-                      variants={flushingContentVariants}
+                      variants={flushingContentVariants('bottom-center')}
                   >
                       <Card>
                           <CardContent className="h-32 sm:h-48 p-2 rounded-md overflow-hidden flex items-center justify-center">
@@ -770,5 +767,3 @@ export default function HomePageClient() {
     </div>
   );
 }
-
-    
