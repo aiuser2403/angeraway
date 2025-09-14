@@ -55,7 +55,7 @@ export default function HomePageClient() {
 
   const toiletImage = PlaceHolderImages.find(img => img.id === 'toilet-background');
 
-  const saveDataToLocalStorage = useCallback(async () => {
+  const saveDataToLocalStorage = useCallback(() => {
     try {
       const data: StoredData = {
         angerText,
@@ -755,7 +755,5 @@ export default function HomePageClient() {
     </div>
   );
 }
-
-    
 
     
