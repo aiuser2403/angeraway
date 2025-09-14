@@ -536,7 +536,7 @@ export default function HomePageClient() {
                 </CardHeader>
                 <CardContent className="flex flex-col flex-grow">
                 <div className="flex flex-col flex-grow justify-between min-h-[500px]">
-                    <div className="flex-grow h-full">
+                    <div className="flex-grow flex flex-col">
                       {renderMediaContent()}
                     </div>
                     
@@ -654,73 +654,103 @@ export default function HomePageClient() {
     </motion.div>
   );
 
-  const renderFlushingState = () => (
-    <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/80">
-      <div className="relative w-[300px] h-[300px] sm:w-[400px] sm:h-[400px]">
-        {toiletImage && (
-          <Image
-            src={toiletImage.imageUrl}
-            alt={toiletImage.description}
-            layout="fill"
-            className="object-contain rounded-full overflow-hidden"
-            data-ai-hint={toiletImage.imageHint}
-            unoptimized
-          />
-        )}
-        <div className="absolute inset-0">
-          {angerText && (
-            <motion.div
-              className="w-48 sm:w-64 absolute"
-              custom={'35%'}
-              initial="initial"
-              animate="flushing"
-              variants={contentVariants}
-            >
-              <Card>
-                <CardContent className="p-2">
-                  <Textarea
-                    readOnly
-                    value={angerText}
-                    className="h-24 sm:h-32 resize-none text-xs"
-                  />
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
+  const renderFlushingState = () => {
+    const flushingContentVariants = {
+        initial: (left: string) => ({
+          opacity: 1, y: '-50%', x: '-50%',
+          top: '30%',
+          left,
+          scale: 1,
+          rotate: 0,
+        }),
+        flushing: {
+          opacity: 0, 
+          y: '-50%', x: '-50%',
+          top: '50%',
+          left: '50%',
+          scale: 0, 
+          rotate: 720,
+          transition: { duration: 2, ease: [0.55, 0, 1, 0.45] }
+        },
+      };
 
-          {(mediaPreview || audioUrl) && (
-            <motion.div
-              className="w-48 sm:w-64 absolute"
-              custom={'65%'}
-              initial="initial"
-              animate="flushing"
-              variants={contentVariants}
-            >
-              <Card>
-                <CardContent className="h-24 sm:h-32 p-2">
-                  <div className="relative w-full h-full">
-                    {mediaPreview && (
-                      <Image
-                        src={mediaPreview}
-                        layout="fill"
-                        className="object-cover rounded"
-                        alt="anger media"
+    return (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/80">
+          <div className="relative w-[300px] h-[300px] sm:w-[400px] sm:h-[400px]">
+            {toiletImage && (
+              <Image
+                src={toiletImage.imageUrl}
+                alt={toiletImage.description}
+                layout="fill"
+                className="object-contain rounded-full overflow-hidden"
+                data-ai-hint={toiletImage.imageHint}
+                unoptimized
+              />
+            )}
+            <div className="absolute inset-0">
+              {angerText && (
+                <motion.div
+                  className="w-32 sm:w-40 absolute"
+                  custom={'25%'}
+                  initial="initial"
+                  animate="flushing"
+                  variants={flushingContentVariants}
+                >
+                  <Card>
+                    <CardContent className="p-1">
+                      <Textarea
+                        readOnly
+                        value={angerText}
+                        className="h-20 sm:h-24 resize-none text-xs"
                       />
-                    )}
-                    {!mediaPreview && audioUrl && (
-                      <div className="flex items-center justify-center h-full text-muted-foreground">
-                        <Mic size={32} />
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+    
+              {mediaPreview && (
+                <motion.div
+                  className="w-32 sm:w-40 absolute"
+                  custom={'50%'}
+                  initial="initial"
+                  animate="flushing"
+                  variants={flushingContentVariants}
+                >
+                  <Card>
+                    <CardContent className="h-20 sm:h-24 p-1">
+                      <div className="relative w-full h-full">
+                          <Image
+                            src={mediaPreview}
+                            layout="fill"
+                            className="object-cover rounded"
+                            alt="anger media"
+                          />
                       </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+    
+              {audioUrl && (
+                 <motion.div
+                  className="w-32 sm:w-40 absolute"
+                  custom={'75%'}
+                  initial="initial"
+                  animate="flushing"
+                  variants={flushingContentVariants}
+                >
+                  <Card>
+                    <CardContent className="h-20 sm:h-24 p-1 flex items-center justify-center">
+                        <Mic size={32} className="text-muted-foreground" />
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  );
+      );
+  }
   
   const renderFlushedState = () => (
     <motion.div
@@ -754,3 +784,5 @@ export default function HomePageClient() {
     </div>
   );
 }
+
+    
