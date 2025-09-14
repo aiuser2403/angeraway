@@ -343,13 +343,21 @@ export default function HomePageClient() {
   }
 
   const contentVariants = {
-    initial: { opacity: 1, y: 0, scale: 1, rotate: 0 },
-    flushing: { 
+    initial: (left: string) => ({
+      opacity: 1, y: '-50%', x: '-50%',
+      top: '50%',
+      left,
+      scale: 1,
+      rotate: 0,
+    }),
+    flushing: {
       opacity: 0, 
-      y: 0,
+      y: '-50%', x: '-50%',
+      top: '50%',
+      left: '50%',
       scale: 0, 
       rotate: 720,
-      transition: { duration: 2, ease: [0.55, 0, 1, 0.45] } // Ease-in quad
+      transition: { duration: 2, ease: [0.55, 0, 1, 0.45] }
     },
   };
 
@@ -647,66 +655,69 @@ export default function HomePageClient() {
   );
 
   const renderFlushingState = () => (
-    <div className="fixed inset-0 flex items-center justify-center z-50 overflow-hidden">
-      {toiletImage && (
-        <Image
-          src={toiletImage.imageUrl}
-          alt={toiletImage.description}
-          fill
-          className="object-cover"
-          data-ai-hint={toiletImage.imageHint}
-          unoptimized
-        />
-      )}
-      <div className="absolute inset-0 bg-black/30" />
-      <div className="relative w-full h-full flex items-center justify-center p-4">
-        {angerText && (
+    <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/80">
+      <div className="relative w-[300px] h-[300px] sm:w-[400px] sm:h-[400px]">
+        {toiletImage && (
+          <Image
+            src={toiletImage.imageUrl}
+            alt={toiletImage.description}
+            layout="fill"
+            className="object-contain rounded-full overflow-hidden"
+            data-ai-hint={toiletImage.imageHint}
+            unoptimized
+          />
+        )}
+        <div className="absolute inset-0">
+          {angerText && (
             <motion.div
-            className="w-full max-w-md absolute"
-            style={{ x: '-50%', y: '-50%', left: '40%', top: '50%' }}
-            initial="initial"
-            animate={"flushing"}
-            variants={contentVariants}
+              className="w-48 sm:w-64 absolute"
+              custom={'35%'}
+              initial="initial"
+              animate="flushing"
+              variants={contentVariants}
             >
-            <Card>
-                <CardHeader>
-                <CardTitle className="flex items-center gap-2 font-headline text-sm">
-                    <FileText className="text-accent" />
-                    Your Words
-                </CardTitle>
-                </CardHeader>
-                <CardContent>
-                <Textarea
+              <Card>
+                <CardContent className="p-2">
+                  <Textarea
                     readOnly
                     value={angerText}
-                    className="h-48 resize-none text-xs"
-                />
+                    className="h-24 sm:h-32 resize-none text-xs"
+                  />
                 </CardContent>
-            </Card>
+              </Card>
             </motion.div>
-        )}
-        
-        {(mediaPreview || audioUrl) && (
+          )}
+
+          {(mediaPreview || audioUrl) && (
             <motion.div
-            className="w-full max-w-md absolute"
-            style={{ x: '-50%', y: '-50%', left: '60%', top: '50%' }}
-            initial="initial"
-            animate={"flushing"}
-            variants={contentVariants}
+              className="w-48 sm:w-64 absolute"
+              custom={'65%'}
+              initial="initial"
+              animate="flushing"
+              variants={contentVariants}
             >
-            <Card>
-                <CardHeader>
-                <CardTitle className="flex items-center gap-2 font-headline text-sm">
-                    <ImageIcon className="text-accent" />
-                    Your Media
-                </CardTitle>
-                </CardHeader>
-                <CardContent className="h-48">
-                    {renderConfirmMediaContent()}
+              <Card>
+                <CardContent className="h-24 sm:h-32 p-2">
+                  <div className="relative w-full h-full">
+                    {mediaPreview && (
+                      <Image
+                        src={mediaPreview}
+                        layout="fill"
+                        className="object-cover rounded"
+                        alt="anger media"
+                      />
+                    )}
+                    {!mediaPreview && audioUrl && (
+                      <div className="flex items-center justify-center h-full text-muted-foreground">
+                        <Mic size={32} />
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
-            </Card>
+              </Card>
             </motion.div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
@@ -743,7 +754,3 @@ export default function HomePageClient() {
     </div>
   );
 }
-
-    
-
-    
