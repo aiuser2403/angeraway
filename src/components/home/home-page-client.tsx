@@ -219,11 +219,8 @@ export default function HomePageClient() {
     }
   
     if (imageBlob) {
-      const blobUrl = URL.createObjectURL(imageBlob);
-      setMediaPreview(blobUrl);
-
       const base64 = await blobToBase64(imageBlob);
-      setMediaPreview(base64); // for storage
+      setMediaPreview(base64);
 
     } else {
       setMediaPreview(null);
@@ -647,6 +644,29 @@ export default function HomePageClient() {
   );
 
   const renderFlushingState = () => {
+    const flushingContentVariants = {
+        initial: (left: string) => ({
+            opacity: 1,
+            scale: 1,
+            y: "-50%",
+            top: "50%",
+            left: left,
+            x: "-50%",
+            rotate: 0,
+        }),
+        flushing: {
+            y: ["-50%", "0%", "50%"],
+            top: "50%",
+            scale: [1, 0.5, 0],
+            rotate: [0, -30, 720],
+            transition: { 
+                duration: 2.5,
+                ease: "easeInOut",
+                times: [0, 0.4, 1]
+            },
+        },
+    };
+
     return (
         <div className="fixed inset-0 z-50">
           {toiletImage && (
@@ -660,30 +680,29 @@ export default function HomePageClient() {
             />
           )}
           <div className="absolute inset-0 bg-black/30" />
-          <div className="relative w-full h-full flex items-center justify-center">
+          <div className="relative w-full h-full overflow-hidden">
+              {angerText && (
+                  <motion.div
+                      className="w-40 sm:w-60 absolute"
+                      custom={'25%'}
+                      initial="initial"
+                      animate="flushing"
+                      variants={flushingContentVariants}
+                  >
+                      <Card>
+                          <CardContent className="h-32 sm:h-48 p-2 rounded-md overflow-hidden">
+                              <p className="text-sm line-clamp-[8]">{angerText}</p>
+                          </CardContent>
+                      </Card>
+                  </motion.div>
+              )}
               {mediaPreview && (
                 <motion.div
                   className="w-40 sm:w-60 absolute"
-                  initial={{
-                    y: "-200%",
-                    x: "-50%",
-                    left: "50%",
-                    scale: 1.5,
-                    rotate: 0,
-                  }}
-                  animate={{
-                    scale: [1.5, 0.8, 0],
-                    rotate: [0, -30, 720],
-                    y: ["-200%", "0%", "50%"],
-                    x: ["-50%", "-50%", "-50%"],
-                    left: "50%",
-                    top: "50%",
-                  }}
-                  transition={{
-                    duration: 2.5,
-                    ease: "easeInOut",
-                    times: [0, 0.4, 1]
-                  }}
+                  custom={'50%'}
+                  initial="initial"
+                  animate="flushing"
+                  variants={flushingContentVariants}
                 >
                   <Card>
                     <CardContent className="h-32 sm:h-48 p-1 rounded-md overflow-hidden">
@@ -698,6 +717,21 @@ export default function HomePageClient() {
                     </CardContent>
                   </Card>
                 </motion.div>
+              )}
+              {audioUrl && (
+                  <motion.div
+                      className="w-40 sm:w-60 absolute"
+                      custom={'75%'}
+                      initial="initial"
+                      animate="flushing"
+                      variants={flushingContentVariants}
+                  >
+                      <Card>
+                          <CardContent className="h-32 sm:h-48 p-2 rounded-md overflow-hidden flex items-center justify-center">
+                              <Mic className="h-16 w-16 text-muted-foreground" />
+                          </CardContent>
+                      </Card>
+                  </motion.div>
               )}
           </div>
         </div>
@@ -736,3 +770,5 @@ export default function HomePageClient() {
     </div>
   );
 }
+
+    
