@@ -13,6 +13,7 @@ import ImageCropDialog from './image-crop-dialog';
 import PleasantSmileyIcon from '@/components/icons/pleasant-smiley-icon';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import ToiletIcon from '../icons/toilet-icon';
+import { blobToBase64 } from '@/lib/image-utils';
 
 type PageState = 'idle' | 'confirming' | 'flushing' | 'flushed';
 type RecordingState = 'idle' | 'recording' | 'recorded' | 'denied';
@@ -55,17 +56,12 @@ export default function HomePageClient() {
 
   const saveDataToLocalStorage = useCallback(() => {
     try {
-      const data: Partial<StoredData> = {
+      const dataToStore: StoredData = {
         angerText,
+        mediaPreview, // This will be a base64 string or null
         audioUrl,
+        timestamp: Date.now(),
       };
-      // Only save mediaPreview if it's a data URL (pasted image), not a temporary blob URL
-      if (mediaPreview && mediaPreview.startsWith('data:')) {
-        data.mediaPreview = mediaPreview;
-      } else {
-        data.mediaPreview = null;
-      }
-      const dataToStore = { ...data, timestamp: Date.now() };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToStore));
     } catch (error) {
       console.error("Error saving to local storage:", error);
@@ -190,16 +186,6 @@ export default function HomePageClient() {
     }
   }, []);
   
-  // Cleanup blob URLs
-  useEffect(() => {
-    const currentMediaPreview = mediaPreview;
-    return () => {
-      if (currentMediaPreview && currentMediaPreview.startsWith('blob:')) {
-        URL.revokeObjectURL(currentMediaPreview);
-      }
-    }
-  }, [mediaPreview]);
-
   useEffect(() => {
     const currentRawImageForCrop = rawImageForCrop;
     return () => {
@@ -216,17 +202,21 @@ export default function HomePageClient() {
     }
   };
   
-  const handleImageSave = (newBlobUrl: string | null) => {
+  const handleImageSave = useCallback(async (blobUrl: string | null) => {
     setIsCropDialogOpen(false);
-    setMediaPreview(newBlobUrl); // This will be a blob URL
-    
-    // Clean up the raw image passed to the cropper
+    if (blobUrl) {
+      const base64 = await blobToBase64(blobUrl);
+      setMediaPreview(base64);
+      URL.revokeObjectURL(blobUrl); // Clean up blob URL after conversion
+    } else {
+      setMediaPreview(null);
+    }
     setRawImageForCrop(null);
-  };
+  }, []);
 
   const handleCropDialogClose = () => {
     setIsCropDialogOpen(false);
-    setRawImageForCrop(null); // This will trigger the cleanup useEffect
+    setRawImageForCrop(null);
     if(fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -363,9 +353,9 @@ export default function HomePageClient() {
               </div>
           </div>
           <p className="text-lg mt-4 mb-4">Your recording is ready.</p>
-           {(pageState === 'idle' || pageState === 'confirming') && !isFlushing && (
+           {audioUrl && (pageState === 'idle' || pageState === 'confirming') && !isFlushing && (
               <div className="border-t pt-4 flex flex-col gap-4 w-full">
-                  {audioUrl && <audio key={audioKey} controls src={audioUrl} className="w-full" />}
+                  <audio key={audioKey} controls src={audioUrl} className="w-full" />
                   {pageState === 'idle' &&
                     <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
                         <Trash2 className="mr-2 h-4 w-4" />
@@ -655,5 +645,3 @@ export default function HomePageClient() {
     </div>
   );
 }
-
-    

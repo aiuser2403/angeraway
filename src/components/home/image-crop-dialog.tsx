@@ -55,7 +55,13 @@ export default function ImageCropDialog({ isOpen, onClose, imageSrc, onSave }: I
   };
 
   const handleUseFullImage = () => {
-    onSave(imageSrc);
+    // We still want to create a new object URL to handle cleanup consistently
+    fetch(imageSrc)
+      .then(res => res.blob())
+      .then(blob => {
+        const blobUrl = URL.createObjectURL(blob);
+        onSave(blobUrl);
+      });
   };
 
   return (
@@ -87,5 +93,3 @@ export default function ImageCropDialog({ isOpen, onClose, imageSrc, onSave }: I
     </Dialog>
   );
 }
-
-    

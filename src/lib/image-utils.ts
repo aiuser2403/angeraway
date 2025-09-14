@@ -66,12 +66,10 @@ export async function getCroppedImg(
     
     ctx.putImageData(data, 0, 0);
 
-    const mimeType = getMimeType(imageSrc);
-
     return new Promise((resolve) => {
         canvas.toBlob((blob) => {
             resolve(blob);
-        }, mimeType);
+        }, 'image/jpeg');
     });
 }
 
@@ -96,5 +94,3 @@ export async function blobToBase64(blobUrl: string): Promise<string> {
       reader.readAsDataURL(blob);
     });
 }
-
-    
