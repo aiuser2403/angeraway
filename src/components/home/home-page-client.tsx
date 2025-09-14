@@ -56,14 +56,9 @@ export default function HomePageClient() {
 
   const saveDataToLocalStorage = useCallback(async () => {
     try {
-      let storableMediaPreview = mediaPreview;
-      if (mediaPreview && mediaPreview.startsWith('blob:')) {
-        storableMediaPreview = await blobToBase64(mediaPreview);
-      }
-
       const dataToStore: StoredData = {
         angerText,
-        mediaPreview: storableMediaPreview,
+        mediaPreview: mediaPreview,
         audioUrl,
         timestamp: Date.now(),
       };
@@ -210,18 +205,20 @@ export default function HomePageClient() {
   const handleImageSave = useCallback(async (imageBlob: Blob | null) => {
     setIsCropDialogOpen(false);
     
-    if (mediaPreview && mediaPreview.startsWith('blob:')) {
-      URL.revokeObjectURL(mediaPreview);
+    if (mediaPreview) {
+      if (mediaPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(mediaPreview);
+      }
     }
     
     if (rawImageForCrop) {
       URL.revokeObjectURL(rawImageForCrop);
       setRawImageForCrop(null);
     }
-
+  
     if (imageBlob) {
-      const blobUrl = URL.createObjectURL(imageBlob);
-      setMediaPreview(blobUrl);
+      const base64 = await blobToBase64(imageBlob);
+      setMediaPreview(base64);
     } else {
       setMediaPreview(null);
     }
@@ -368,7 +365,7 @@ export default function HomePageClient() {
     const audioContent = audioUrl ? (
       <div className="border-t pt-4 mt-4 flex flex-col gap-4 w-full">
         <p className="text-sm text-center text-muted-foreground">Your recording is ready.</p>
-        <audio key={audioKey} controls src={audioUrl} className="w-full" />
+        <audio key={audioKey} controls controlsList="nodownload" src={audioUrl} className="w-full" />
         {!isFlushing && pageState === 'idle' && (
             <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
                 <Trash2 className="mr-2 h-4 w-4" />
@@ -407,7 +404,8 @@ export default function HomePageClient() {
   
     const audioContent = audioUrl ? (
         <div className="border-t pt-4 mt-4 flex flex-col gap-4 w-full">
-            <audio key={audioKey} controls src={audioUrl} className="w-full" />
+            <p className="text-sm text-center text-muted-foreground">Your recording is ready.</p>
+            <audio key={audioKey} controls controlsList="nodownload" src={audioUrl} className="w-full" />
         </div>
     ) : (
         <div className="border-t pt-4 mt-4 text-center text-muted-foreground flex flex-col items-center justify-center w-full">
@@ -681,7 +679,3 @@ export default function HomePageClient() {
     </div>
   );
 }
-
-    
-
-    
