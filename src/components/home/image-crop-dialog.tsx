@@ -12,7 +12,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { getCroppedImg, blobToBase64 } from '@/lib/image-utils';
+import { getCroppedImg } from '@/lib/image-utils';
 import { useToast } from '@/hooks/use-toast';
 
 type ImageCropDialogProps = {
@@ -37,10 +37,8 @@ export default function ImageCropDialog({ isOpen, onClose, imageSrc, onSave }: I
         try {
             const croppedImageBlob = await getCroppedImg(imageSrc, croppedAreaPixels);
             if (croppedImageBlob) {
-                // For persistence, we convert to base64. For display, blob URL would be more performant
-                // but adds complexity with cleanup. Base64 is more stable for this use case.
-                const base64 = await blobToBase64(croppedImageBlob);
-                onSave(base64);
+                const blobUrl = URL.createObjectURL(croppedImageBlob);
+                onSave(blobUrl);
             } else {
                 onSave(null);
             }
@@ -57,23 +55,7 @@ export default function ImageCropDialog({ isOpen, onClose, imageSrc, onSave }: I
   };
 
   const handleUseFullImage = () => {
-     // If the src is already a data URL, just use it.
-    if (!imageSrc.startsWith('blob:')) {
-        onSave(imageSrc);
-        return;
-    }
-    // If it's a blob, we need to convert it to save it.
-    fetch(imageSrc)
-      .then(res => res.blob())
-      .then(blob => blobToBase64(blob))
-      .then(base64 => {
-        onSave(base64);
-      })
-      .catch(err => {
-        console.error(err);
-        toast({ variant: 'destructive', title: 'Error processing image' });
-        onSave(null);
-      });
+     onSave(imageSrc);
   };
 
   return (

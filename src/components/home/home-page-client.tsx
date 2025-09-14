@@ -56,11 +56,9 @@ export default function HomePageClient() {
 
   const saveDataToLocalStorage = useCallback(async () => {
     try {
-      // If mediaPreview is a blob URL, it can't be stored.
-      // We only store it if it's a data URL (e.g., from a pasted image or for persistence).
-      // Blob URLs are temporary and will cause a fetch error if we try to save them.
       const dataToStore: StoredData = {
         angerText,
+        // Only save to localStorage if it's a data URL (base64). Blob URLs are temporary.
         mediaPreview: mediaPreview && !mediaPreview.startsWith('blob:') ? mediaPreview : null,
         audioUrl,
         timestamp: Date.now(),
@@ -114,18 +112,9 @@ export default function HomePageClient() {
       return;
     }
     
-    // For pasted files, we convert to a data URL so it can be stored.
-    try {
-        const base64Image = await blobToBase64(file);
-        setRawImageForCrop(base64Image);
-        setIsCropDialogOpen(true);
-    } catch (error) {
-        console.error('Error reading pasted file:', error);
-        toast({
-            variant: 'destructive',
-            title: 'Could not process pasted image',
-        });
-    }
+    const imageUrl = URL.createObjectURL(file);
+    setRawImageForCrop(imageUrl);
+    setIsCropDialogOpen(true);
   }
 
   const handlePaste = useCallback((event: ClipboardEvent) => {
@@ -177,7 +166,7 @@ export default function HomePageClient() {
   }, []);
 
   useEffect(() => {
-    if (pageState === 'idle') { // Only save when not in the middle of an animation
+    if (pageState === 'idle') {
       saveDataToLocalStorage();
     }
   }, [angerText, mediaPreview, audioUrl, pageState, saveDataToLocalStorage]);
@@ -196,7 +185,7 @@ export default function HomePageClient() {
   }, []);
   
   useEffect(() => {
-    // Cleanup for raw image blob URL
+    // Cleanup for raw image blob URL, which is temporary.
     const currentRawImageForCrop = rawImageForCrop;
     return () => {
         if (currentRawImageForCrop && currentRawImageForCrop.startsWith('blob:')) {
@@ -206,7 +195,7 @@ export default function HomePageClient() {
   }, [rawImageForCrop]);
 
   useEffect(() => {
-    // Cleanup for final media preview blob URL
+    // Cleanup for final media preview blob URL.
     const currentMediaPreview = mediaPreview;
     return () => {
       if (currentMediaPreview && currentMediaPreview.startsWith('blob:')) {
@@ -220,24 +209,32 @@ export default function HomePageClient() {
     if (file) {
       handleFile(file);
     }
+    // Reset file input to allow re-uploading the same file
+    event.target.value = '';
   };
   
   const handleImageSave = useCallback((image: string | null) => {
     setIsCropDialogOpen(false);
+    
+    // Clean up old blob URL if it exists
+    if (mediaPreview && mediaPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(mediaPreview);
+    }
+    
     setMediaPreview(image);
-    setRawImageForCrop(null); // Cleanup raw image ref
-  }, []);
+    setRawImageForCrop(null); 
+  }, [mediaPreview]);
 
   const handleCropDialogClose = () => {
     setIsCropDialogOpen(false);
-    setRawImageForCrop(null);
+    setRawImageForCrop(null); // This will trigger the cleanup useEffect for rawImageForCrop
     if(fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   }
 
   const startRecording = async () => {
-    setAudioUrl(null);
+    handleDiscardAudio();
     audioChunksRef.current = [];
     
     try {
@@ -299,7 +296,7 @@ export default function HomePageClient() {
   }
 
   const handleDiscardImage = () => {
-    setMediaPreview(null);
+    setMediaPreview(null); // This will trigger the cleanup useEffect for mediaPreview
     if(fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -341,7 +338,6 @@ export default function HomePageClient() {
 
   
   const renderMediaContent = (isFlushing = false) => {
-    // Always prioritize showing the image if it exists.
     if (mediaPreview) {
       return (
         <div className="w-full h-full relative group">
@@ -368,7 +364,7 @@ export default function HomePageClient() {
               </div>
           </div>
           <p className="text-lg mt-4 mb-4">Your recording is ready.</p>
-           {pageState !== 'flushing' && (
+           {!isFlushing && (
               <div className="border-t pt-4 flex flex-col gap-4 w-full">
                   <audio key={audioKey} controls src={audioUrl} className="w-full" />
                   {pageState === 'idle' &&
@@ -608,7 +604,7 @@ export default function HomePageClient() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 font-headline">
-                    {(mediaPreview || audioUrl) && <ImageIcon className="text-accent" />}
+                    <ImageIcon className="text-accent" />
                     Your Media
                   </CardTitle>
                 </CardHeader>
