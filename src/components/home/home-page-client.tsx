@@ -56,14 +56,12 @@ export default function HomePageClient() {
 
   const saveDataToLocalStorage = useCallback(async () => {
     try {
-      let storableMediaPreview = mediaPreview;
-      if (storableMediaPreview && storableMediaPreview.startsWith('blob:')) {
-        storableMediaPreview = await blobToBase64(storableMediaPreview);
-      }
-      
+      // If mediaPreview is a blob URL, it can't be stored.
+      // We only store it if it's a data URL (e.g., from a pasted image that we convert).
+      // For uploads, we won't persist the image across reloads, but it will work in-session.
       const dataToStore: StoredData = {
         angerText,
-        mediaPreview: storableMediaPreview,
+        mediaPreview: mediaPreview && !mediaPreview.startsWith('blob:') ? mediaPreview : null,
         audioUrl,
         timestamp: Date.now(),
       };
@@ -97,7 +95,7 @@ export default function HomePageClient() {
     setIsCropDialogOpen(true);
   };
   
-  const handlePastedFile = (file: File) => {
+  const handlePastedFile = async (file: File) => {
     if (file.size > MAX_FILE_SIZE_BYTES) {
       toast({
         variant: 'destructive',
@@ -116,12 +114,18 @@ export default function HomePageClient() {
       return;
     }
     
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setRawImageForCrop(reader.result as string);
-      setIsCropDialogOpen(true);
-    };
-    reader.readAsDataURL(file);
+    // For pasted files, we convert to a data URL so it can be stored.
+    try {
+        const base64Image = await blobToBase64(file);
+        setRawImageForCrop(base64Image);
+        setIsCropDialogOpen(true);
+    } catch (error) {
+        console.error('Error reading pasted file:', error);
+        toast({
+            variant: 'destructive',
+            title: 'Could not process pasted image',
+        });
+    }
   }
 
   const handlePaste = useCallback((event: ClipboardEvent) => {
@@ -192,6 +196,7 @@ export default function HomePageClient() {
   }, []);
   
   useEffect(() => {
+    // Cleanup for raw image blob URL
     const currentRawImageForCrop = rawImageForCrop;
     return () => {
         if (currentRawImageForCrop && currentRawImageForCrop.startsWith('blob:')) {
@@ -200,6 +205,16 @@ export default function HomePageClient() {
     }
   }, [rawImageForCrop]);
 
+  useEffect(() => {
+    // Cleanup for final media preview blob URL
+    const currentMediaPreview = mediaPreview;
+    return () => {
+      if (currentMediaPreview && currentMediaPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(currentMediaPreview);
+      }
+    };
+  }, [mediaPreview]);
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -207,23 +222,11 @@ export default function HomePageClient() {
     }
   };
   
-  const handleImageSave = useCallback(async (blobUrl: string | null) => {
+  const handleImageSave = useCallback((blobUrl: string | null) => {
     setIsCropDialogOpen(false);
-    
-    const oldMediaPreview = mediaPreview;
-    
-    if (blobUrl) {
-      setMediaPreview(blobUrl);
-    } else {
-      setMediaPreview(null);
-    }
-
-    if (oldMediaPreview && oldMediaPreview.startsWith('blob:')) {
-      URL.revokeObjectURL(oldMediaPreview);
-    }
-    
-    setRawImageForCrop(null);
-  }, [mediaPreview]);
+    setMediaPreview(blobUrl);
+    setRawImageForCrop(null); // Cleanup raw image ref
+  }, []);
 
   const handleCropDialogClose = () => {
     setIsCropDialogOpen(false);
@@ -296,9 +299,6 @@ export default function HomePageClient() {
   }
 
   const handleDiscardImage = () => {
-    if (mediaPreview && mediaPreview.startsWith('blob:')) {
-      URL.revokeObjectURL(mediaPreview);
-    }
     setMediaPreview(null);
     if(fileInputRef.current) {
       fileInputRef.current.value = '';
