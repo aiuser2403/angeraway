@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Image as ImageIcon, Mic, FileText, Trash2, X, Square, Play, Pause } from 'lucide-react';
+import { Image as ImageIcon, Mic, FileText, Trash2, X, Play, Pause } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import ImageCropDialog from './image-crop-dialog';
@@ -59,12 +59,9 @@ export default function HomePageClient() {
 
   const saveDataToLocalStorage = useCallback(async () => {
     try {
-      const storedDataString = localStorage.getItem(STORAGE_KEY);
-      const existingData = storedDataString ? JSON.parse(storedDataString) : {};
-
       const data: StoredData = {
         angerText,
-        mediaPreview: mediaPreview && !mediaPreview.startsWith('blob:') ? mediaPreview : existingData.mediaPreview,
+        mediaPreview,
         audioUrl,
         timestamp: Date.now(),
       };
@@ -226,20 +223,10 @@ export default function HomePageClient() {
       setMediaPreview(blobUrl);
 
       const base64 = await blobToBase64(imageBlob);
-      const storedDataString = localStorage.getItem(STORAGE_KEY);
-      const storedData = storedDataString ? JSON.parse(storedDataString) : {};
-      storedData.mediaPreview = base64;
-      storedData.timestamp = Date.now();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(storedData));
+      setMediaPreview(base64); // for storage
 
     } else {
       setMediaPreview(null);
-      const storedDataString = localStorage.getItem(STORAGE_KEY);
-      if (storedDataString) {
-        const storedData = JSON.parse(storedDataString);
-        delete storedData.mediaPreview;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(storedData));
-      }
     }
   }, [mediaPreview, rawImageForCrop]);
 
@@ -356,8 +343,14 @@ export default function HomePageClient() {
   }
 
   const contentVariants = {
-    initial: { opacity: 1, y: 0, scale: 1 },
-    flushing: { opacity: 0, y: '100vh', scale: 0.2, transition: { duration: 2, ease: "easeInOut" } },
+    initial: { opacity: 1, y: 0, scale: 1, rotate: 0 },
+    flushing: { 
+      opacity: 0, 
+      y: 100, 
+      scale: 0.1, 
+      rotate: 360 * 2,
+      transition: { duration: 2, ease: "easeInOut" } 
+    },
   };
 
   const handleConfirm = () => {
@@ -393,13 +386,13 @@ export default function HomePageClient() {
   }, [audioKey]);
 
 
-  const renderMediaContent = (isFlushing = false) => {
+  const renderMediaContent = () => {
     const imageContent = (
       <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden">
         {mediaPreview ? (
           <div className="w-full h-full relative group">
             <Image src={mediaPreview} alt="Anger media preview" layout="fill" className="object-cover rounded-md" />
-            {!isFlushing && pageState === 'idle' && (
+            {pageState === 'idle' && (
               <div className="absolute top-2 right-2 z-10">
                 <Button size="icon" variant="destructive" onClick={handleDiscardImage} className="rounded-full h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
                   <X className="h-4 w-4" />
@@ -471,10 +464,10 @@ export default function HomePageClient() {
     );
   
     const audioContent = audioUrl ? (
-      <div className="border-t pt-4 mt-4 flex flex-col gap-2 w-full justify-center">
-          <p className="text-sm text-center text-muted-foreground">Your recording.</p>
-          <audio controls controlsList="nodownload" src={audioUrl} className="w-full" />
-      </div>
+        <div className="border-t pt-4 mt-4 flex flex-col gap-2 w-full justify-center items-center">
+            <p className="text-sm text-center text-muted-foreground">Your recording is ready.</p>
+            <audio controls controlsList="nodownload" src={audioUrl} className="w-full" />
+        </div>
     ) : (
         <div className="border-t pt-4 mt-4 text-center text-muted-foreground flex flex-col items-center justify-center w-full">
             <Mic className="h-10 w-10" />
@@ -555,7 +548,7 @@ export default function HomePageClient() {
                             <Button variant={recordingState === 'recording' ? 'destructive' : 'outline'} onClick={handleRecordControl} className="w-full justify-center">
                             {recordingState === 'recording' ? (
                                 <>
-                                    <Square className="mr-2 h-4 w-4" />
+                                    <X className="mr-2 h-4 w-4" />
                                     Stop Recording
                                 </>
                             ) : (
@@ -669,6 +662,7 @@ export default function HomePageClient() {
       <div className="relative w-full max-w-6xl mx-auto h-full p-4">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full h-full items-center">
           <motion.div
+            initial="initial"
             animate={angerText ? "flushing" : "initial"}
             variants={contentVariants}
             className="w-full"
@@ -692,6 +686,7 @@ export default function HomePageClient() {
             )}
           </motion.div>
           <motion.div
+            initial="initial"
             animate={mediaPreview || audioUrl ? "flushing" : "initial"}
             variants={contentVariants}
             className="w-full"
@@ -749,3 +744,5 @@ export default function HomePageClient() {
     </div>
   );
 }
+
+    
