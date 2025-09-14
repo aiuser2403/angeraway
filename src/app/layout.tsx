@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { MessageSquareShare } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Anger Away',
+  title: 'Why So Angry',
   description: 'A place to let go of your anger.',
 };
 
