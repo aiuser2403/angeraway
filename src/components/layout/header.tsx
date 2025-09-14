@@ -52,7 +52,7 @@ export default function Header() {
             )}
             <Link href="/">
             <h1 className="text-2xl md:text-3xl font-headline font-bold text-primary">
-                Hi Folk
+                Why So Angry
             </h1>
             </Link>
         </div>
