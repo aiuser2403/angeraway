@@ -433,7 +433,7 @@ export default function HomePageClient() {
             className="w-full"
         >
         <div className="text-center mb-12">
-            <h1 className="text-5xl md:text-7xl font-headline font-bold text-primary">Angry</h1>
+            <h1 className="text-5xl md:text-7xl font-headline font-bold text-primary">Why So Angry</h1>
             <p className="mt-2 text-lg text-muted-foreground max-w-3xl mx-auto">
                 We all go through moments of anger, unhappiness, or anxiety and it is part of life but sometimes keeping it inside can be harder. Its better to write down what you’re feeling, even if it’s just for yourself, can be incredibly helpful. Write, record, or paste an image of why you're angry.
             </p>
