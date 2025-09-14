@@ -635,95 +635,98 @@ export default function HomePageClient() {
 
   const renderFlushingState = () => {
     const flushingContentVariants = (from: 'top-left' | 'top-right' | 'bottom-center') => ({
-        initial: {
-            opacity: 1,
-            x: from === 'top-left' ? '-150%' : from === 'top-right' ? '150%' : '0%',
-            y: from.includes('top') ? '-150%' : '150%',
-            scale: 1,
-            rotate: Math.random() * 180 - 90,
+      key: from,
+      initial: {
+        opacity: 1,
+        x: from === 'top-left' ? '-150%' : from === 'top-right' ? '150%' : '0%',
+        y: from.includes('top') ? '-150%' : '150%',
+        scale: 1,
+        rotate: Math.random() * 180 - 90,
+      },
+      animate: {
+        x: '0%',
+        y: '0%',
+        scale: [1, 0.5, 0],
+        rotate: [0, 360, 1080],
+        transition: {
+          duration: 2.5,
+          ease: 'circIn',
+          times: [0, 0.5, 1],
         },
-        flushing: {
-            x: '0%',
-            y: '0%',
-            scale: 0,
-            rotate: 1080,
-            transition: { 
-                duration: 2.5,
-                ease: "circIn",
-            },
-        },
+      },
     });
-
+  
     return (
-        <div className="fixed inset-0 z-50 overflow-hidden">
-          {toiletImage && (
-            <Image
-                src={toiletImage.imageUrl}
-                alt={toiletImage.description}
-                layout="fill"
-                objectFit="cover"
-                className="absolute inset-0 w-full h-full"
-                unoptimized
-            />
+      <div className="fixed inset-0 z-50 overflow-hidden">
+        {toiletImage && (
+          <Image
+            src={toiletImage.imageUrl}
+            alt={toiletImage.description}
+            layout="fill"
+            objectFit="cover"
+            className="absolute inset-0 w-full h-full"
+            unoptimized
+            data-ai-hint={toiletImage.imageHint}
+          />
+        )}
+        <div className="absolute inset-0 bg-black/30" />
+        <div className="relative w-full h-full flex items-center justify-center">
+          {angerText && (
+            <motion.div
+              className="w-40 sm:w-60 absolute"
+              custom={'top-left'}
+              variants={flushingContentVariants('top-left')}
+              initial="initial"
+              animate="animate"
+            >
+              <Card>
+                <CardContent className="h-32 sm:h-48 p-2 rounded-md overflow-hidden">
+                  <p className="text-sm line-clamp-[8]">{angerText}</p>
+                </CardContent>
+              </Card>
+            </motion.div>
           )}
-          <div className="absolute inset-0 bg-black/30" />
-          <div className="relative w-full h-full flex items-center justify-center">
-              {angerText && (
-                  <motion.div
-                      className="w-40 sm:w-60 absolute"
-                      custom={'top-left'}
-                      initial="initial"
-                      animate="flushing"
-                      variants={flushingContentVariants('top-left')}
-                  >
-                      <Card>
-                          <CardContent className="h-32 sm:h-48 p-2 rounded-md overflow-hidden">
-                              <p className="text-sm line-clamp-[8]">{angerText}</p>
-                          </CardContent>
-                      </Card>
-                  </motion.div>
-              )}
-              {mediaPreview && (
-                <motion.div
-                  className="w-40 sm:w-60 absolute"
-                  custom={'top-right'}
-                  initial="initial"
-                  animate="flushing"
-                  variants={flushingContentVariants('top-right')}
-                >
-                  <Card>
-                    <CardContent className="h-32 sm:h-48 p-1 rounded-md overflow-hidden">
-                      <div className="relative w-full h-full">
-                          <Image
-                            src={mediaPreview}
-                            layout="fill"
-                            className="object-cover rounded-md"
-                            alt="anger media"
-                          />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )}
-              {audioUrl && (
-                  <motion.div
-                      className="w-40 sm:w-60 absolute"
-                      custom={'bottom-center'}
-                      initial="initial"
-                      animate="flushing"
-                      variants={flushingContentVariants('bottom-center')}
-                  >
-                      <Card>
-                          <CardContent className="h-32 sm:h-48 p-2 rounded-md overflow-hidden flex items-center justify-center">
-                              <Mic className="h-16 w-16 text-muted-foreground" />
-                          </CardContent>
-                      </Card>
-                  </motion.div>
-              )}
-          </div>
+          {mediaPreview && (
+            <motion.div
+              className="w-40 sm:w-60 absolute"
+              custom={'top-right'}
+              variants={flushingContentVariants('top-right')}
+              initial="initial"
+              animate="animate"
+            >
+              <Card>
+                <CardContent className="h-32 sm:h-48 p-1 rounded-md overflow-hidden">
+                  <div className="relative w-full h-full">
+                    <Image
+                      src={mediaPreview}
+                      layout="fill"
+                      className="object-cover rounded-md"
+                      alt="anger media"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+          {audioUrl && (
+            <motion.div
+              className="w-40 sm:w-60 absolute"
+              custom={'bottom-center'}
+              variants={flushingContentVariants('bottom-center')}
+              initial="initial"
+              animate="animate"
+            >
+              <Card>
+                <CardContent className="h-32 sm:h-48 p-2 rounded-md overflow-hidden flex items-center justify-center">
+                  <Mic className="h-16 w-16 text-muted-foreground" />
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
         </div>
-      );
-  }
+      </div>
+    );
+  };
   
   const renderFlushedState = () => (
     <motion.div
@@ -759,4 +762,6 @@ export default function HomePageClient() {
 }
 
     
+    
+
     
