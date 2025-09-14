@@ -272,7 +272,7 @@ export default function HomePageClient() {
       setAngerText('');
       handleDiscardImage();
       handleDiscardAudio();
-    }, 5000);
+    }, 10000);
   };
 
   const handleReset = () => {
@@ -599,7 +599,7 @@ export default function HomePageClient() {
         scale: 0,
         rotate: 1080,
         transition: {
-          duration: 4.5,
+          duration: 9.5,
           ease: 'circIn',
         },
       },
