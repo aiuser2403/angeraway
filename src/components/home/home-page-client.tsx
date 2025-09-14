@@ -54,16 +54,11 @@ export default function HomePageClient() {
 
   const toiletImage = PlaceHolderImages.find(img => img.id === 'toilet-background');
 
-  const saveDataToLocalStorage = useCallback(async () => {
+  const saveDataToLocalStorage = useCallback(() => {
     try {
-      let storableMediaPreview = mediaPreview;
-      if (mediaPreview && mediaPreview.startsWith('blob:')) {
-        storableMediaPreview = await blobToBase64(mediaPreview);
-      }
-
       const data: Partial<StoredData> = {
         angerText,
-        mediaPreview: storableMediaPreview,
+        mediaPreview,
         audioUrl,
       };
       const dataToStore = { ...data, timestamp: Date.now() };
@@ -173,10 +168,10 @@ export default function HomePageClient() {
   }, []);
 
   useEffect(() => {
-    if (isContentPresent) {
+    if (pageState === 'idle') { // Only save when not in the middle of an animation
       saveDataToLocalStorage();
     }
-  }, [angerText, mediaPreview, audioUrl, isContentPresent, saveDataToLocalStorage]);
+  }, [angerText, mediaPreview, audioUrl, pageState, saveDataToLocalStorage]);
 
   useEffect(() => {
     const audio = new Audio('https://firebasestorage.googleapis.com/v0/b/prototyper-de2a8.appspot.com/o/public%2Ftoilet-flush-sound.mp3?alt=media&token=86a761ad-c841-499c-88e2-8874135d518d');
@@ -193,15 +188,13 @@ export default function HomePageClient() {
   
   // Cleanup blob URLs
   useEffect(() => {
+    let rawImage = rawImageForCrop;
     return () => {
-      if (mediaPreview && mediaPreview.startsWith('blob:')) {
-        URL.revokeObjectURL(mediaPreview);
-      }
-      if (rawImageForCrop && rawImageForCrop.startsWith('blob:')) {
-        URL.revokeObjectURL(rawImageForCrop);
+      if (rawImage && rawImage.startsWith('blob:')) {
+        URL.revokeObjectURL(rawImage);
       }
     }
-  }, [mediaPreview, rawImageForCrop]);
+  }, [rawImageForCrop]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -210,12 +203,36 @@ export default function HomePageClient() {
     }
   };
   
-  const handleImageSave = (newImage: string | null) => {
+  const handleImageSave = async (blobUrl: string | null) => {
+    // Revoke previous blob url if it exists
     if (mediaPreview && mediaPreview.startsWith('blob:')) {
       URL.revokeObjectURL(mediaPreview);
     }
-    setMediaPreview(newImage);
+  
     setIsCropDialogOpen(false);
+  
+    if (blobUrl) {
+      // Convert blob URL to a more permanent base64 data URL before revoking
+      try {
+        const base64 = await blobToBase64(blobUrl);
+        setMediaPreview(base64);
+      } catch (error) {
+        console.error("Failed to convert blob to base64:", error);
+        setMediaPreview(null);
+        toast({
+          variant: 'destructive',
+          title: 'Error processing image',
+          description: 'Could not display the cropped image.'
+        });
+      } finally {
+        // Clean up the temporary blob URL
+        URL.revokeObjectURL(blobUrl);
+      }
+    } else {
+      setMediaPreview(null);
+    }
+    
+    // Cleanup for the raw image passed to the cropper
     if (rawImageForCrop && rawImageForCrop.startsWith('blob:')) {
       URL.revokeObjectURL(rawImageForCrop);
     }
@@ -659,7 +676,5 @@ export default function HomePageClient() {
     </div>
   );
 }
-
-    
 
     
