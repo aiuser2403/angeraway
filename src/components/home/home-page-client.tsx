@@ -105,7 +105,7 @@ export default function HomePageClient() {
         }
       }
     }
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     window.addEventListener('paste', handlePaste);
@@ -293,30 +293,21 @@ export default function HomePageClient() {
   
   const renderMediaContent = (isFlushing = false) => {
     if (mediaPreview) {
-        return (
-          <div className="w-full h-full relative group">
-            <Image src={mediaPreview} alt="Anger media preview" fill className="object-contain rounded-md" />
-            {!isFlushing && pageState === 'idle' && (
-              <div className="absolute top-2 right-2 z-10">
-                  <Button size="icon" variant="destructive" onClick={handleDiscardImage} className="rounded-full h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <X className="h-4 w-4" />
-                      <span className="sr-only">Discard Image</span>
-                  </Button>
-              </div>
-            )}
-          </div>
-        );
-      }
-
-    if (recordingState === 'recording' && !isFlushing) {
-        return (
-          <div className="flex flex-col items-center justify-center flex-1 h-full text-center">
-            <Mic className="h-16 w-16 text-red-500 animate-pulse" />
-            <p className="mt-4 text-lg">Recording in progress...</p>
-          </div>
-        );
+      return (
+        <div className="w-full h-full relative group">
+          <Image src={mediaPreview} alt="Anger media preview" fill className="object-contain rounded-md" />
+          {!isFlushing && pageState === 'idle' && (
+            <div className="absolute top-2 right-2 z-10">
+                <Button size="icon" variant="destructive" onClick={handleDiscardImage} className="rounded-full h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <X className="h-4 w-4" />
+                    <span className="sr-only">Discard Image</span>
+                </Button>
+            </div>
+          )}
+        </div>
+      );
     }
-    
+  
     if (audioUrl) {
       return (
         <div className="flex flex-col items-center justify-center flex-1 h-full text-center p-4 w-full">
@@ -329,7 +320,7 @@ export default function HomePageClient() {
           <p className="text-lg mt-4 mb-4">Your recording is ready.</p>
            {pageState === 'idle' && !isFlushing && (
               <div className="border-t pt-4 flex flex-col gap-4 w-full">
-                  <audio key={audioKey} controls src={audioUrl} className="w-full" />
+                  {audioUrl && <audio key={audioKey} controls src={audioUrl} className="w-full" />}
                   <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
                       <Trash2 className="mr-2 h-4 w-4" />
                       Discard
@@ -341,12 +332,21 @@ export default function HomePageClient() {
       );
     }
 
-    return (
-        <div className="text-center text-muted-foreground">
-          <ImageIcon className="mx-auto h-12 w-12" />
-          <p className="mt-2">Upload or paste an image to express your feelings.</p>
+    if (recordingState === 'recording' && !isFlushing) {
+      return (
+        <div className="flex flex-col items-center justify-center flex-1 h-full text-center">
+          <Mic className="h-16 w-16 text-red-500 animate-pulse" />
+          <p className="mt-4 text-lg">Recording in progress...</p>
         </div>
       );
+    }
+  
+    return (
+      <div className="text-center text-muted-foreground">
+        <ImageIcon className="mx-auto h-12 w-12" />
+        <p className="mt-2">Upload or paste an image to express your feelings.</p>
+      </div>
+    );
   };
 
   const renderIdleState = () => (
