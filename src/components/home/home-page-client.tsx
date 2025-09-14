@@ -377,7 +377,7 @@ export default function HomePageClient() {
         <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden">
         {mediaPreview ? (
             <div className="w-full h-full relative group">
-            <Image src={mediaPreview} alt="Anger media preview" layout="fill" className="object-cover rounded-md" />
+            <Image src={mediaPreview} alt="Anger media preview" layout="fill" className="object-contain rounded-md" />
             {pageState === 'idle' && (
                 <div className="absolute top-2 right-2 z-10">
                 <Button size="icon" variant="destructive" onClick={handleDiscardImage} className="rounded-full h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -440,7 +440,7 @@ export default function HomePageClient() {
   const renderConfirmMediaContent = () => {
     const imageContent = mediaPreview ? (
         <div className="w-full h-full relative group">
-          <Image src={mediaPreview} alt="Anger media preview" layout="fill" className="object-cover rounded-md" />
+          <Image src={mediaPreview} alt="Anger media preview" layout="fill" className="object-contain rounded-md" />
         </div>
     ) : (
       <div className="text-center text-muted-foreground flex flex-col items-center justify-center h-full">
