@@ -13,6 +13,7 @@ import ImageCropDialog from './image-crop-dialog';
 import PleasantSmileyIcon from '@/components/icons/pleasant-smiley-icon';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import ToiletIcon from '../icons/toilet-icon';
+import { blobToBase64 } from '@/lib/image-utils';
 
 type PageState = 'idle' | 'confirming' | 'flushing' | 'flushed';
 type RecordingState = 'idle' | 'recording' | 'recorded' | 'denied';
@@ -53,16 +54,24 @@ export default function HomePageClient() {
 
   const toiletImage = PlaceHolderImages.find(img => img.id === 'toilet-background');
 
-  const saveDataToLocalStorage = (data: Partial<Omit<StoredData, 'timestamp'>>) => {
+  const saveDataToLocalStorage = useCallback(async () => {
     try {
-      const currentDataString = localStorage.getItem(STORAGE_KEY);
-      const currentData = currentDataString ? JSON.parse(currentDataString) : {};
-      const newData = { ...currentData, ...data, timestamp: Date.now() };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+      let storableMediaPreview = mediaPreview;
+      if (mediaPreview && mediaPreview.startsWith('blob:')) {
+        storableMediaPreview = await blobToBase64(mediaPreview);
+      }
+
+      const data: Partial<StoredData> = {
+        angerText,
+        mediaPreview: storableMediaPreview,
+        audioUrl,
+      };
+      const dataToStore = { ...data, timestamp: Date.now() };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToStore));
     } catch (error) {
       console.error("Error saving to local storage:", error);
     }
-  };
+  }, [angerText, mediaPreview, audioUrl]);
   
   const handleFile = (file: File) => {
     if (file.size > MAX_FILE_SIZE_BYTES) {
@@ -165,9 +174,9 @@ export default function HomePageClient() {
 
   useEffect(() => {
     if (isContentPresent) {
-      saveDataToLocalStorage({ angerText, mediaPreview, audioUrl });
+      saveDataToLocalStorage();
     }
-  }, [angerText, mediaPreview, audioUrl, isContentPresent]);
+  }, [angerText, mediaPreview, audioUrl, isContentPresent, saveDataToLocalStorage]);
 
   useEffect(() => {
     const audio = new Audio('https://firebasestorage.googleapis.com/v0/b/prototyper-de2a8.appspot.com/o/public%2Ftoilet-flush-sound.mp3?alt=media&token=86a761ad-c841-499c-88e2-8874135d518d');
@@ -181,6 +190,18 @@ export default function HomePageClient() {
         }
     }
   }, []);
+  
+  // Cleanup blob URLs
+  useEffect(() => {
+    return () => {
+      if (mediaPreview && mediaPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(mediaPreview);
+      }
+      if (rawImageForCrop && rawImageForCrop.startsWith('blob:')) {
+        URL.revokeObjectURL(rawImageForCrop);
+      }
+    }
+  }, [mediaPreview, rawImageForCrop]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -194,9 +215,6 @@ export default function HomePageClient() {
       URL.revokeObjectURL(mediaPreview);
     }
     setMediaPreview(newImage);
-    if (newImage) {
-      saveDataToLocalStorage({ mediaPreview: newImage });
-    }
     setIsCropDialogOpen(false);
     if (rawImageForCrop && rawImageForCrop.startsWith('blob:')) {
       URL.revokeObjectURL(rawImageForCrop);
@@ -217,7 +235,6 @@ export default function HomePageClient() {
 
   const startRecording = async () => {
     setAudioUrl(null);
-    saveDataToLocalStorage({ audioUrl: null });
     audioChunksRef.current = [];
     
     try {
@@ -236,7 +253,6 @@ export default function HomePageClient() {
             const base64Audio = reader.result as string;
             setAudioUrl(base64Audio);
             setAudioKey(Date.now()); // Force re-render of audio element
-            saveDataToLocalStorage({ audioUrl: base64Audio });
         };
         reader.readAsDataURL(audioBlob);
         setRecordingState('recorded');
@@ -275,7 +291,6 @@ export default function HomePageClient() {
 
   const handleDiscardAudio = () => {
     setAudioUrl(null);
-    saveDataToLocalStorage({ audioUrl: null });
     setRecordingState('idle');
     audioChunksRef.current = [];
   }
@@ -285,7 +300,6 @@ export default function HomePageClient() {
       URL.revokeObjectURL(mediaPreview);
     }
     setMediaPreview(null);
-    saveDataToLocalStorage({ mediaPreview: null });
     if(fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -301,12 +315,8 @@ export default function HomePageClient() {
     setTimeout(() => {
       setPageState('flushed');
       setAngerText('');
-      if (mediaPreview && mediaPreview.startsWith('blob:')) {
-        URL.revokeObjectURL(mediaPreview);
-      }
-      setMediaPreview(null);
-      setAudioUrl(null);
-      setRecordingState('idle');
+      handleDiscardImage();
+      handleDiscardAudio();
 
       try {
         localStorage.removeItem(STORAGE_KEY);
@@ -647,7 +657,5 @@ export default function HomePageClient() {
     </div>
   );
 }
-
-    
 
     

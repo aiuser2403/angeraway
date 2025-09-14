@@ -36,14 +36,12 @@ export default function ImageCropDialog({ isOpen, onClose, imageSrc, onSave }: I
     if (croppedAreaPixels) {
         try {
             const croppedImageBlob = await getCroppedImg(imageSrc, croppedAreaPixels);
-            
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              const dataUrl = reader.result as string;
-              onSave(dataUrl);
-            };
-            reader.readAsDataURL(croppedImageBlob);
-
+            if (croppedImageBlob) {
+                const blobUrl = URL.createObjectURL(croppedImageBlob);
+                onSave(blobUrl);
+            } else {
+                onSave(null);
+            }
           } catch (e) {
             console.error(e);
             toast({

@@ -27,7 +27,7 @@ export async function getCroppedImg(
   imageSrc: string,
   pixelCrop: { x: number; y: number; width: number; height: number },
   rotation = 0
-): Promise<Blob> {
+): Promise<Blob | null> {
     const image = await createImage(imageSrc);
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -70,9 +70,7 @@ export async function getCroppedImg(
 
     return new Promise((resolve) => {
         canvas.toBlob((blob) => {
-            if (blob) {
-                resolve(blob);
-            }
+            resolve(blob);
         }, mimeType);
     });
 }
@@ -86,6 +84,17 @@ function rotateSize(width: number, height: number, rotation: number) {
     height:
       Math.abs(Math.sin(rotRad) * width) + Math.abs(Math.cos(rotRad) * height),
   }
+}
+
+export async function blobToBase64(blobUrl: string): Promise<string> {
+    const response = await fetch(blobUrl);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
 }
 
     
