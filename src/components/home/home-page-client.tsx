@@ -14,7 +14,6 @@ import PleasantSmileyIcon from '@/components/icons/pleasant-smiley-icon';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import ToiletIcon from '../icons/toilet-icon';
 import { blobToBase64 } from '@/lib/image-utils';
-import { Progress } from '@/components/ui/progress';
 
 type PageState = 'idle' | 'confirming' | 'flushing' | 'flushed';
 type RecordingState = 'idle' | 'recording' | 'recorded' | 'denied';
@@ -60,13 +59,18 @@ export default function HomePageClient() {
 
   const saveDataToLocalStorage = useCallback(async () => {
     try {
-      const dataToStore: StoredData = {
+      const data: StoredData = {
         angerText,
-        mediaPreview,
+        mediaPreview: null, // Blobs can't be stringified
         audioUrl,
         timestamp: Date.now(),
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToStore));
+
+      if (mediaPreview && !mediaPreview.startsWith('blob:')) {
+        data.mediaPreview = mediaPreview;
+      }
+      
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch (error) {
       console.error("Error saving to local storage:", error);
     }
@@ -219,10 +223,23 @@ export default function HomePageClient() {
     }
   
     if (imageBlob) {
+      // Create a blob URL for immediate display
+      const blobUrl = URL.createObjectURL(imageBlob);
+      setMediaPreview(blobUrl);
+
+      // Convert to base64 for local storage persistence
       const base64 = await blobToBase64(imageBlob);
-      setMediaPreview(base64);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'),
+        mediaPreview: base64,
+        timestamp: Date.now(),
+      }));
+
     } else {
       setMediaPreview(null);
+      const storedData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      delete storedData.mediaPreview;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(storedData));
     }
   }, [mediaPreview, rawImageForCrop]);
 
@@ -354,16 +371,35 @@ export default function HomePageClient() {
     } else {
       audioRef.current.play();
     }
-    setIsAudioPlaying(!isAudioPlaying);
   };
-  
+
   const onAudioEnded = () => {
     setIsAudioPlaying(false);
   };
 
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      const handlePlay = () => setIsAudioPlaying(true);
+      const handlePause = () => setIsAudioPlaying(false);
+      const handleEnded = () => setIsAudioPlaying(false);
+
+      audio.addEventListener('play', handlePlay);
+      audio.addEventListener('pause', handlePause);
+      audio.addEventListener('ended', handleEnded);
+
+      return () => {
+        audio.removeEventListener('play', handlePlay);
+        audio.removeEventListener('pause', handlePause);
+        audio.removeEventListener('ended', handleEnded);
+      };
+    }
+  }, [audioKey]);
+
+
   const renderMediaContent = (isFlushing = false) => {
     const imageContent = (
-      <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-full">
+      <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-[75%]">
         {mediaPreview ? (
           <div className="w-full h-full relative group">
             <Image src={mediaPreview} alt="Anger media preview" layout="fill" className="object-cover rounded-md" />
@@ -408,8 +444,6 @@ export default function HomePageClient() {
             key={audioKey}
             ref={audioRef}
             src={audioUrl}
-            onPlay={() => setIsAudioPlaying(true)}
-            onPause={() => setIsAudioPlaying(false)}
             onEnded={onAudioEnded}
             className="hidden"
           />
@@ -419,52 +453,44 @@ export default function HomePageClient() {
   
     return (
       <div className="flex flex-col h-full justify-between">
-        <div className="flex-grow h-full flex flex-col">
+        <div className="h-full flex flex-col">
           {imageContent}
+          <div className="border-t mt-4 flex-grow h-[25%] flex items-center justify-center">
+            {audioContent}
+          </div>
         </div>
-        {(audioContent || recordingState === 'recording') && (
-            <div className="border-t mt-4">
-                {audioContent}
-            </div>
-        )}
       </div>
     );
   };
   
   const renderConfirmMediaContent = () => {
     const imageContent = mediaPreview ? (
-        <div className="w-full h-full relative group">
+        <div className="w-full h-[75%] relative group">
           <Image src={mediaPreview} alt="Anger media preview" layout="fill" className="object-cover rounded-md" />
         </div>
     ) : (
-      <div className="text-center text-muted-foreground flex flex-col items-center justify-center h-full">
+      <div className="text-center text-muted-foreground flex flex-col items-center justify-center h-[75%]">
         <ImageIcon className="mx-auto h-12 w-12" />
         <p className="mt-2">No image was uploaded.</p>
       </div>
     );
   
     const audioContent = audioUrl ? (
-        <div className="border-t pt-4 mt-4 flex flex-col gap-4 w-full">
-            <p className="text-sm text-center text-muted-foreground">Your recording.</p>
-            <audio controls controlsList="nodownload" src={audioUrl} className="w-full" />
-        </div>
+      <div className="border-t pt-4 mt-4 flex flex-col gap-2 w-full h-[25%] justify-center">
+          <p className="text-sm text-center text-muted-foreground">Your recording.</p>
+          <audio controls controlsList="nodownload" src={audioUrl} className="w-full" />
+      </div>
     ) : (
-        <div className="border-t pt-4 mt-4 text-center text-muted-foreground flex flex-col items-center justify-center w-full">
+        <div className="border-t pt-4 mt-4 text-center text-muted-foreground flex flex-col items-center justify-center w-full h-[25%]">
             <Mic className="h-10 w-10" />
             <p className="mt-2">No recording was made.</p>
         </div>
     );
   
     return (
-      <div className="flex flex-col h-full">
-        <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-full">
-          {imageContent}
-        </div>
-         {(audioUrl) && (
-            <div className="border-t mt-4">
-                {audioContent}
-            </div>
-        )}
+      <div className="flex flex-col h-full border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden">
+        {imageContent}
+        {audioContent}
       </div>
     );
   };
@@ -509,7 +535,7 @@ export default function HomePageClient() {
                 </CardTitle>
                 </CardHeader>
                 <CardContent>
-                <div className="flex flex-col space-y-4 h-full justify-between min-h-[500px]">
+                <div className="flex flex-col h-full justify-between min-h-[500px]">
                     <div className="flex-grow h-full">
                       {renderMediaContent()}
                     </div>
@@ -607,7 +633,7 @@ export default function HomePageClient() {
                 </CardTitle>
                 </CardHeader>
                 <CardContent>
-                <div className="flex flex-col space-y-4 h-full justify-between min-h-[500px]">
+                <div className="flex flex-col h-full justify-between min-h-[500px]">
                     {renderConfirmMediaContent()}
                 </div>
                 </CardContent>
@@ -680,7 +706,7 @@ export default function HomePageClient() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex flex-col space-y-4 h-full justify-between min-h-[500px]">
+                  <div className="flex flex-col h-full justify-between min-h-[500px]">
                       {renderConfirmMediaContent()}
                   </div>
                 </CardContent>
@@ -724,3 +750,5 @@ export default function HomePageClient() {
     </div>
   );
 }
+
+    
