@@ -56,9 +56,14 @@ export default function HomePageClient() {
 
   const saveDataToLocalStorage = useCallback(async () => {
     try {
+      let storableMediaPreview = mediaPreview;
+      if (mediaPreview && mediaPreview.startsWith('blob:')) {
+        storableMediaPreview = await blobToBase64(mediaPreview);
+      }
+
       const dataToStore: StoredData = {
         angerText,
-        mediaPreview,
+        mediaPreview: storableMediaPreview,
         audioUrl,
         timestamp: Date.now(),
       };
@@ -215,22 +220,12 @@ export default function HomePageClient() {
     }
 
     if (imageBlob) {
-      try {
-        const base64data = await blobToBase64(imageBlob);
-        setMediaPreview(base64data);
-      } catch (error) {
-        console.error("Error converting blob to base64:", error);
-        toast({
-          variant: 'destructive',
-          title: 'Error processing image',
-          description: 'Could not display the cropped image.',
-        });
-        setMediaPreview(null);
-      }
+      const blobUrl = URL.createObjectURL(imageBlob);
+      setMediaPreview(blobUrl);
     } else {
       setMediaPreview(null);
     }
-  }, [mediaPreview, rawImageForCrop, toast]);
+  }, [mediaPreview, rawImageForCrop]);
 
   const handleCropDialogClose = () => {
     setIsCropDialogOpen(false);
@@ -351,58 +346,82 @@ export default function HomePageClient() {
 
   
   const renderMediaContent = (isFlushing = false) => {
-    if (mediaPreview) {
-      return (
-        <div className="w-full h-full relative group">
-          <Image src={mediaPreview} alt="Anger media preview" fill className="object-contain rounded-md" />
-          {!isFlushing && pageState === 'idle' && (
-            <div className="absolute top-2 right-2 z-10">
-                <Button size="icon" variant="destructive" onClick={handleDiscardImage} className="rounded-full h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <X className="h-4 w-4" />
-                    <span className="sr-only">Discard Image</span>
-                </Button>
-            </div>
-          )}
-        </div>
-      );
-    }
-  
-    if (audioUrl) {
-      return (
-        <div className="flex flex-col items-center justify-center flex-1 h-full text-center p-4 w-full">
-          <div className="relative">
-              <div className="absolute inset-0 bg-primary/10 rounded-full animate-pulse"></div>
-              <div className="relative bg-primary/20 rounded-full p-6">
-                  <Mic className="h-16 w-16 text-primary" />
-              </div>
+    const imageContent = mediaPreview ? (
+      <div className="w-full h-full relative group">
+        <Image src={mediaPreview} alt="Anger media preview" layout="fill" className="object-contain rounded-md" />
+        {!isFlushing && pageState === 'idle' && (
+          <div className="absolute top-2 right-2 z-10">
+            <Button size="icon" variant="destructive" onClick={handleDiscardImage} className="rounded-full h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+              <X className="h-4 w-4" />
+              <span className="sr-only">Discard Image</span>
+            </Button>
           </div>
-          <p className="text-lg mt-4 mb-4">Your recording is ready.</p>
-           {!isFlushing && pageState === 'idle' && (
-              <div className="border-t pt-4 flex flex-col gap-4 w-full">
-                  {audioUrl && <audio key={audioKey} controls src={audioUrl} className="w-full" />}
-                  <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Discard
-                  </Button>
-              </div>
-          )}
-        </div>
-      );
-    }
-
-    if (recordingState === 'recording' && !isFlushing) {
-      return (
-        <div className="flex flex-col items-center justify-center flex-1 h-full text-center">
-          <Mic className="h-16 w-16 text-red-500 animate-pulse" />
-          <p className="mt-4 text-lg">Recording in progress...</p>
-        </div>
-      );
-    }
+        )}
+      </div>
+    ) : (
+      <div className="text-center text-muted-foreground flex flex-col items-center justify-center h-full">
+        <ImageIcon className="mx-auto h-12 w-12" />
+        <p className="mt-2">Upload or paste an image.</p>
+      </div>
+    );
+  
+    const audioContent = audioUrl ? (
+      <div className="border-t pt-4 mt-4 flex flex-col gap-4 w-full">
+        <p className="text-sm text-center text-muted-foreground">Your recording is ready.</p>
+        <audio key={audioKey} controls src={audioUrl} className="w-full" />
+        {!isFlushing && pageState === 'idle' && (
+            <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Discard Recording
+            </Button>
+        )}
+      </div>
+    ) : recordingState === 'recording' ? (
+      <div className="border-t pt-4 mt-4 flex flex-col items-center justify-center w-full">
+        <Mic className="h-10 w-10 text-red-500 animate-pulse" />
+        <p className="mt-2 text-lg">Recording...</p>
+      </div>
+    ) : null;
   
     return (
-      <div className="text-center text-muted-foreground">
+      <div className="flex flex-col h-full">
+        <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-full">
+          {imageContent}
+        </div>
+        {audioContent}
+      </div>
+    );
+  };
+  
+  const renderConfirmMediaContent = () => {
+    const imageContent = mediaPreview ? (
+        <div className="w-full h-full relative group">
+          <Image src={mediaPreview} alt="Anger media preview" layout="fill" className="object-contain rounded-md" />
+        </div>
+    ) : (
+      <div className="text-center text-muted-foreground flex flex-col items-center justify-center h-full">
         <ImageIcon className="mx-auto h-12 w-12" />
-        <p className="mt-2">Upload or paste an image to express your feelings.</p>
+        <p className="mt-2">No image was uploaded.</p>
+      </div>
+    );
+  
+    const audioContent = audioUrl ? (
+        <div className="border-t pt-4 mt-4 flex flex-col gap-4 w-full">
+            <audio key={audioKey} controls src={audioUrl} className="w-full" />
+        </div>
+    ) : (
+        <div className="border-t pt-4 mt-4 text-center text-muted-foreground flex flex-col items-center justify-center w-full">
+            <Mic className="h-10 w-10" />
+            <p className="mt-2">No recording was made.</p>
+        </div>
+    );
+  
+    return (
+      <div className="flex flex-col h-full">
+        <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-full">
+          {imageContent}
+        </div>
+        {audioContent}
       </div>
     );
   };
@@ -448,8 +467,8 @@ export default function HomePageClient() {
                 </CardHeader>
                 <CardContent>
                 <div className="flex flex-col space-y-4 h-full justify-between min-h-[500px]">
-                    <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-full">
-                        {renderMediaContent()}
+                    <div className="flex-grow h-full">
+                      {renderMediaContent()}
                     </div>
                     
                     <div className="flex-shrink-0 flex flex-col gap-4 mt-4">
@@ -546,9 +565,7 @@ export default function HomePageClient() {
                 </CardHeader>
                 <CardContent>
                 <div className="flex flex-col space-y-4 h-full justify-between min-h-[500px]">
-                    <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-full">
-                        {renderMediaContent(true)}
-                    </div>
+                    {renderConfirmMediaContent()}
                 </div>
                 </CardContent>
             </Card>
@@ -621,9 +638,7 @@ export default function HomePageClient() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-col space-y-4 h-full justify-between min-h-[500px]">
-                    <div className="relative flex-grow flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-4 overflow-hidden h-full">
-                      {renderMediaContent(true)}
-                    </div>
+                      {renderConfirmMediaContent()}
                   </div>
                 </CardContent>
               </Card>
@@ -666,5 +681,7 @@ export default function HomePageClient() {
     </div>
   );
 }
+
+    
 
     
