@@ -83,13 +83,37 @@ export default function HomePageClient() {
       return;
     }
     
+    const imageUrl = URL.createObjectURL(file);
+    setRawImageForCrop(imageUrl);
+    setIsCropDialogOpen(true);
+  };
+  
+  const handlePastedFile = (file: File) => {
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      toast({
+        variant: 'destructive',
+        title: 'File too large',
+        description: `Please select a file smaller than ${MAX_FILE_SIZE_MB}MB.`,
+      });
+      return;
+    }
+
+    if (!SUPPORTED_IMAGE_FORMATS.includes(file.type)) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid file type',
+        description: 'Please select a JPEG, PNG, WEBP, GIF, or SVG file.',
+      });
+      return;
+    }
+    
     const reader = new FileReader();
     reader.onloadend = () => {
       setRawImageForCrop(reader.result as string);
       setIsCropDialogOpen(true);
     };
     reader.readAsDataURL(file);
-  };
+  }
 
   const handlePaste = useCallback((event: ClipboardEvent) => {
     const items = event.clipboardData?.items;
@@ -99,7 +123,7 @@ export default function HomePageClient() {
       if (items[i].type.indexOf('image') !== -1) {
         const file = items[i].getAsFile();
         if (file) {
-          handleFile(file);
+          handlePastedFile(file);
           event.preventDefault();
           break;
         }
@@ -166,16 +190,25 @@ export default function HomePageClient() {
   };
   
   const handleImageSave = (newImage: string | null) => {
+    if (mediaPreview && mediaPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(mediaPreview);
+    }
     setMediaPreview(newImage);
     if (newImage) {
       saveDataToLocalStorage({ mediaPreview: newImage });
     }
     setIsCropDialogOpen(false);
+    if (rawImageForCrop && rawImageForCrop.startsWith('blob:')) {
+      URL.revokeObjectURL(rawImageForCrop);
+    }
     setRawImageForCrop(null);
   };
 
   const handleCropDialogClose = () => {
     setIsCropDialogOpen(false);
+    if (rawImageForCrop && rawImageForCrop.startsWith('blob:')) {
+      URL.revokeObjectURL(rawImageForCrop);
+    }
     setRawImageForCrop(null);
     if(fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -248,6 +281,9 @@ export default function HomePageClient() {
   }
 
   const handleDiscardImage = () => {
+    if (mediaPreview && mediaPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(mediaPreview);
+    }
     setMediaPreview(null);
     saveDataToLocalStorage({ mediaPreview: null });
     if(fileInputRef.current) {
@@ -265,6 +301,9 @@ export default function HomePageClient() {
     setTimeout(() => {
       setPageState('flushed');
       setAngerText('');
+      if (mediaPreview && mediaPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(mediaPreview);
+      }
       setMediaPreview(null);
       setAudioUrl(null);
       setRecordingState('idle');
@@ -608,5 +647,7 @@ export default function HomePageClient() {
     </div>
   );
 }
+
+    
 
     

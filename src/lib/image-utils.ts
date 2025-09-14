@@ -1,4 +1,5 @@
 
+
 export const createImage = (url: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
     const image = new Image();
@@ -9,8 +10,11 @@ export const createImage = (url: string): Promise<HTMLImageElement> =>
   });
 
 function getMimeType(imageSrc: string): string {
-    const match = imageSrc.match(/^data:(image\/[a-z]+);base64,/);
-    return match ? match[1] : 'image/jpeg';
+    if (imageSrc.startsWith('data:')) {
+      const match = imageSrc.match(/^data:(image\/[a-z]+);base64,/);
+      return match ? match[1] : 'image/jpeg';
+    }
+    return 'image/jpeg'; // Assume jpeg for blob URLs, cropper will output this.
 }
 
 const ROTATION_TO_RADIANS = {
@@ -83,3 +87,5 @@ function rotateSize(width: number, height: number, rotation: number) {
       Math.abs(Math.sin(rotRad) * width) + Math.abs(Math.cos(rotRad) * height),
   }
 }
+
+    
