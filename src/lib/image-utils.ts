@@ -1,5 +1,4 @@
 
-
 export const createImage = (url: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
     const image = new Image();
@@ -78,3 +77,5 @@ export async function blobToBase64(blob: Blob): Promise<string> {
       reader.readAsDataURL(blob);
     });
 }
+
+    

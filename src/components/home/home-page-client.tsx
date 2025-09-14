@@ -57,8 +57,8 @@ export default function HomePageClient() {
   const saveDataToLocalStorage = useCallback(async () => {
     try {
       // If mediaPreview is a blob URL, it can't be stored.
-      // We only store it if it's a data URL (e.g., from a pasted image that we convert).
-      // For uploads, we won't persist the image across reloads, but it will work in-session.
+      // We only store it if it's a data URL (e.g., from a pasted image or for persistence).
+      // Blob URLs are temporary and will cause a fetch error if we try to save them.
       const dataToStore: StoredData = {
         angerText,
         mediaPreview: mediaPreview && !mediaPreview.startsWith('blob:') ? mediaPreview : null,
@@ -222,9 +222,9 @@ export default function HomePageClient() {
     }
   };
   
-  const handleImageSave = useCallback((blobUrl: string | null) => {
+  const handleImageSave = useCallback((image: string | null) => {
     setIsCropDialogOpen(false);
-    setMediaPreview(blobUrl);
+    setMediaPreview(image);
     setRawImageForCrop(null); // Cleanup raw image ref
   }, []);
 
@@ -341,6 +341,7 @@ export default function HomePageClient() {
 
   
   const renderMediaContent = (isFlushing = false) => {
+    // Always prioritize showing the image if it exists.
     if (mediaPreview) {
       return (
         <div className="w-full h-full relative group">
@@ -367,7 +368,7 @@ export default function HomePageClient() {
               </div>
           </div>
           <p className="text-lg mt-4 mb-4">Your recording is ready.</p>
-           {audioUrl && (pageState === 'idle' || pageState === 'confirming') && !isFlushing && (
+           {pageState !== 'flushing' && (
               <div className="border-t pt-4 flex flex-col gap-4 w-full">
                   <audio key={audioKey} controls src={audioUrl} className="w-full" />
                   {pageState === 'idle' &&
@@ -378,7 +379,6 @@ export default function HomePageClient() {
                   }
               </div>
           )}
-          {isFlushing && audioUrl && <audio key={audioKey} src={audioUrl} className="w-full" controls disabled />}
         </div>
       );
     }
@@ -659,3 +659,5 @@ export default function HomePageClient() {
     </div>
   );
 }
+
+    
