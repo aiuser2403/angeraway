@@ -18,7 +18,7 @@ import { blobToBase64 } from '@/lib/image-utils';
 type PageState = 'idle' | 'confirming' | 'flushing' | 'flushed';
 type RecordingState = 'idle' | 'recording' | 'recorded' | 'denied';
 
-const MAX_FILE_SIZE_MB = 10;
+const MAX_FILE_SIZE_MB = 100;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 const SUPPORTED_IMAGE_FORMATS = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
 const STORAGE_KEY = 'anger-away-data';
@@ -166,8 +166,27 @@ export default function HomePageClient() {
   }, []);
 
   useEffect(() => {
+    // This effect runs when the component unmounts.
+    // It's a good place to clean up any temporary blob URLs.
+    return () => {
+      if (mediaPreview && mediaPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(mediaPreview);
+      }
+      if (rawImageForCrop && rawImageForCrop.startsWith('blob:')) {
+        URL.revokeObjectURL(rawImageForCrop);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (pageState === 'idle') {
-      saveDataToLocalStorage();
+      // Don't save blob URLs to localStorage
+      if (mediaPreview && mediaPreview.startsWith('blob:')) {
+        const dataToSave = { angerText, audioUrl, mediaPreview: null, timestamp: Date.now() };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+      } else {
+        saveDataToLocalStorage();
+      }
     }
   }, [angerText, mediaPreview, audioUrl, pageState, saveDataToLocalStorage]);
 
@@ -184,26 +203,6 @@ export default function HomePageClient() {
     }
   }, []);
   
-  useEffect(() => {
-    // Cleanup for raw image blob URL, which is temporary.
-    const currentRawImageForCrop = rawImageForCrop;
-    return () => {
-        if (currentRawImageForCrop && currentRawImageForCrop.startsWith('blob:')) {
-            URL.revokeObjectURL(currentRawImageForCrop);
-        }
-    }
-  }, [rawImageForCrop]);
-
-  useEffect(() => {
-    // Cleanup for final media preview blob URL.
-    const currentMediaPreview = mediaPreview;
-    return () => {
-      if (currentMediaPreview && currentMediaPreview.startsWith('blob:')) {
-        URL.revokeObjectURL(currentMediaPreview);
-      }
-    };
-  }, [mediaPreview]);
-
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -213,7 +212,7 @@ export default function HomePageClient() {
     event.target.value = '';
   };
   
-  const handleImageSave = useCallback((image: string | null) => {
+  const handleImageSave = useCallback(async (image: string | null) => {
     setIsCropDialogOpen(false);
     
     // Clean up old blob URL if it exists
@@ -221,13 +220,20 @@ export default function HomePageClient() {
       URL.revokeObjectURL(mediaPreview);
     }
     
+    if (rawImageForCrop && rawImageForCrop.startsWith('blob:')) {
+      URL.revokeObjectURL(rawImageForCrop);
+    }
+    setRawImageForCrop(null);
+
     setMediaPreview(image);
-    setRawImageForCrop(null); 
-  }, [mediaPreview]);
+  }, [mediaPreview, rawImageForCrop]);
 
   const handleCropDialogClose = () => {
     setIsCropDialogOpen(false);
-    setRawImageForCrop(null); // This will trigger the cleanup useEffect for rawImageForCrop
+    if(rawImageForCrop) {
+      URL.revokeObjectURL(rawImageForCrop);
+      setRawImageForCrop(null);
+    }
     if(fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -296,7 +302,10 @@ export default function HomePageClient() {
   }
 
   const handleDiscardImage = () => {
-    setMediaPreview(null); // This will trigger the cleanup useEffect for mediaPreview
+    if (mediaPreview && mediaPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(mediaPreview);
+    }
+    setMediaPreview(null);
     if(fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -364,15 +373,13 @@ export default function HomePageClient() {
               </div>
           </div>
           <p className="text-lg mt-4 mb-4">Your recording is ready.</p>
-           {!isFlushing && (
+           {!isFlushing && pageState === 'idle' && (
               <div className="border-t pt-4 flex flex-col gap-4 w-full">
-                  <audio key={audioKey} controls src={audioUrl} className="w-full" />
-                  {pageState === 'idle' &&
-                    <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Discard
-                    </Button>
-                  }
+                  {audioUrl && <audio key={audioKey} controls src={audioUrl} className="w-full" />}
+                  <Button variant="outline" onClick={handleDiscardAudio} className="w-full justify-center">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Discard
+                  </Button>
               </div>
           )}
         </div>
