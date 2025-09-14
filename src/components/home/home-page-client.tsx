@@ -1,12 +1,12 @@
 
 'use client';
 
-import { useState, useRef, useMemo, useEffect } from 'react';
+import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Image as ImageIcon, Mic, FileText, Square, Trash2, X, Check } from 'lucide-react';
+import { Image as ImageIcon, Mic, FileText, Trash2, X, Play, Pause, Square } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import ImageCropDialog from './image-crop-dialog';
@@ -63,6 +63,56 @@ export default function HomePageClient() {
       console.error("Error saving to local storage:", error);
     }
   };
+  
+  const handleFile = (file: File) => {
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      toast({
+        variant: 'destructive',
+        title: 'File too large',
+        description: `Please select a file smaller than ${MAX_FILE_SIZE_MB}MB.`,
+      });
+      return;
+    }
+
+    if (!SUPPORTED_IMAGE_FORMATS.includes(file.type)) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid file type',
+        description: 'Please select a JPEG, PNG, WEBP, GIF, or SVG file.',
+      });
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setRawImageForCrop(reader.result as string);
+      setIsCropDialogOpen(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handlePaste = useCallback((event: ClipboardEvent) => {
+    const items = event.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) {
+          handleFile(file);
+          event.preventDefault();
+          break;
+        }
+      }
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    window.addEventListener('paste', handlePaste);
+    return () => {
+      window.removeEventListener('paste', handlePaste);
+    };
+  }, [handlePaste]);
 
   useEffect(() => {
     try {
@@ -111,30 +161,7 @@ export default function HomePageClient() {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > MAX_FILE_SIZE_BYTES) {
-        toast({
-          variant: 'destructive',
-          title: 'File too large',
-          description: `Please select a file smaller than ${MAX_FILE_SIZE_MB}MB.`,
-        });
-        return;
-      }
-
-      if (!SUPPORTED_IMAGE_FORMATS.includes(file.type)) {
-        toast({
-          variant: 'destructive',
-          title: 'Invalid file type',
-          description: 'Please select a JPEG, PNG, WEBP, GIF, or SVG file.',
-        });
-        return;
-      }
-      
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setRawImageForCrop(reader.result as string);
-        setIsCropDialogOpen(true);
-      };
-      reader.readAsDataURL(file);
+      handleFile(file);
     }
   };
   
@@ -309,7 +336,7 @@ export default function HomePageClient() {
                   </Button>
               </div>
           )}
-          {isFlushing && <audio key={audioKey} src={audioUrl} className="w-full" controls disabled />}
+          {isFlushing && audioUrl && <audio key={audioKey} src={audioUrl} className="w-full" controls disabled />}
         </div>
       );
     }
@@ -317,7 +344,7 @@ export default function HomePageClient() {
     return (
         <div className="text-center text-muted-foreground">
           <ImageIcon className="mx-auto h-12 w-12" />
-          <p className="mt-2">Upload a photo to express your feelings.</p>
+          <p className="mt-2">Upload or paste an image to express your feelings.</p>
         </div>
       );
   };
@@ -332,7 +359,7 @@ export default function HomePageClient() {
         >
         <div className="text-center mb-12">
             <h1 className="text-5xl md:text-7xl font-headline font-bold text-primary">Angry</h1>
-            <p className="mt-2 text-lg text-muted-foreground">Write or record why you're angry.</p>
+            <p className="mt-2 text-lg text-muted-foreground">Write, record, or paste an image of why you're angry.</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl mx-auto">
@@ -407,7 +434,6 @@ export default function HomePageClient() {
                 onClick={handleConfirm}
                 disabled={!isContentPresent}
             >
-                <Check className="mr-3 h-8 w-8" />
                 Done Sharing
             </Button>
         </div>
